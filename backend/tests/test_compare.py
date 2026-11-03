@@ -55,3 +55,4 @@ def test_comparison_empty_string_identifier():
     assert response.status_code == 422
     data = response.json()
     assert data["error"]["code"] == "REQUEST_VALIDATION_ERROR"
+

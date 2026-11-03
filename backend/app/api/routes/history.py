@@ -23,3 +23,4 @@ async def get_search_history() -> HistoryResponse:
         total=0,
         message="Search history database persistence is staged for Phase 4+. Returning empty collection.",
     )
+

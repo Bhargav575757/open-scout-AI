@@ -1,4 +1,3 @@
-import os
 from typing import List
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -11,7 +10,7 @@ class Settings(BaseSettings):
     """
 
     APP_NAME: str = Field(default="OpenScout API", description="Name of the application")
-    APP_VERSION: str = Field(default="0.3.0", description="Semver application version")
+    APP_VERSION: str = Field(default="0.4.0", description="Semver application version")
     DEBUG: bool = Field(default=False, description="Enable debug mode and verbose logging")
     API_V1_PREFIX: str = Field(default="/api/v1", description="Prefix for Version 1 API endpoints")
     PORT: int = Field(default=8000, description="Port on which the application listens")
@@ -26,15 +25,28 @@ class Settings(BaseSettings):
         description="Optional comma-separated list of additional allowed CORS origins",
     )
 
-    # Future AI & External Service Integrations (Phase 4+)
-    # Secrets are strictly managed in server environments and never exposed to clients
+    # GitHub REST API Configuration (Phase 4)
+    GITHUB_TOKEN: str = Field(
+        default="",
+        description="GitHub Personal Access Token for authenticated repository search and higher rate limits",
+    )
+    GITHUB_API_BASE_URL: str = Field(
+        default="https://api.github.com",
+        description="Official GitHub REST API base URL",
+    )
+    GITHUB_API_TIMEOUT: float = Field(
+        default=10.0,
+        description="HTTP request timeout in seconds for GitHub API calls",
+    )
+    GITHUB_MAX_RETRIES: int = Field(
+        default=2,
+        description="Maximum retry attempts for transient GitHub errors (5xx/timeouts)",
+    )
+
+    # Future AI & Database Integrations (Phase 5+)
     MISTRAL_API_KEY: str = Field(
         default="",
         description="Mistral AI API Key for intent extraction and reasoning",
-    )
-    GITHUB_TOKEN: str = Field(
-        default="",
-        description="GitHub Personal Access Token for repository discovery and verification",
     )
     DATABASE_URL: str = Field(
         default="",

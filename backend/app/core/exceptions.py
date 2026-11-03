@@ -63,6 +63,83 @@ class FeatureNotImplementedException(OpenScoutException):
         )
 
 
+class GitHubAPIException(OpenScoutException):
+    """Base exception for errors communicating with the GitHub REST API."""
+
+    def __init__(
+        self,
+        message: str,
+        code: str = "GITHUB_API_ERROR",
+        status_code: int = status.HTTP_502_BAD_GATEWAY,
+        details: Optional[Any] = None,
+    ):
+        super().__init__(
+            message=message,
+            code=code,
+            status_code=status_code,
+            details=details,
+        )
+
+
+class GitHubRateLimitException(GitHubAPIException):
+    """Raised when the GitHub API rate limit is exceeded."""
+
+    def __init__(
+        self,
+        message: str = "GitHub API rate limit exceeded. Please wait before retrying or configure a personal GITHUB_TOKEN.",
+        details: Optional[Any] = None,
+    ):
+        super().__init__(
+            message=message,
+            code="GITHUB_RATE_LIMIT_EXCEEDED",
+            status_code=status.HTTP_403_FORBIDDEN,
+            details=details,
+        )
+
+
+class GitHubAuthException(GitHubAPIException):
+    """Raised when GitHub token authentication fails (401 Bad credentials)."""
+
+    def __init__(
+        self,
+        message: str = "GitHub authentication failed. Please verify that your GITHUB_TOKEN is valid.",
+        details: Optional[Any] = None,
+    ):
+        super().__init__(
+            message=message,
+            code="GITHUB_AUTH_FAILED",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            details=details,
+        )
+
+
+class GitHubResourceNotFoundException(ResourceNotFoundException):
+    """Raised when a specific GitHub repository does not exist or is private."""
+
+    def __init__(self, message: str, details: Optional[Any] = None):
+        super().__init__(
+            message=message,
+            details=details,
+        )
+        self.code = "GITHUB_REPOSITORY_NOT_FOUND"
+
+
+class GitHubUpstreamException(GitHubAPIException):
+    """Raised when GitHub returns transient 5xx errors or network timeout."""
+
+    def __init__(
+        self,
+        message: str = "GitHub API is currently unreachable or experiencing service degradation. Please try again later.",
+        details: Optional[Any] = None,
+    ):
+        super().__init__(
+            message=message,
+            code="GITHUB_UPSTREAM_ERROR",
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            details=details,
+        )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """
     Registers centralized exception handlers to format all errors into a uniform JSON structure.

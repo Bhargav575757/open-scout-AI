@@ -28,3 +28,4 @@ class HistoryResponse(BaseModel):
         default="Search history database persistence is staged for Phase 4+. Returning empty collection.",
         description="Development status note",
     )
+

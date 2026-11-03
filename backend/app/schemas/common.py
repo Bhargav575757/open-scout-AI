@@ -39,3 +39,4 @@ class RootResponse(BaseModel):
 class MessageResponse(BaseModel):
     message: str = Field(..., description="Informational message")
     status: str = Field(default="development", description="Execution status")
+

@@ -88,13 +88,14 @@ Mistral AI is the primary LLM provider for OpenScout. Gemini and OpenAI APIs are
 
 ---
 
-## 5. Planned GitHub API Integration
+## 5. GitHub REST API Integration (Phase 4 Implemented)
 
-OpenScout uses the official GitHub REST API (v3) with personal access tokens (`GITHUB_TOKEN`) to fetch real-world data:
-- **Repository Search**: Query repositories by topics, language, and keywords.
-- **Metadata Verification**: Check repository activity (stars, forks, open issues, last push date, license).
-- **Content Ingestion**: Fetch repository READMEs (`GET /repos/{owner}/{repo}/readme`), repository trees, and documentation files for RAG indexing.
-- **Rate Limit Handling**: Implement token authentication, intelligent caching (in-memory or Redis/Postgres), and exponential backoff to handle GitHub rate limits gracefully.
+OpenScout uses the official GitHub REST API (v3) with personal access tokens (`GITHUB_TOKEN`) or safe unauthenticated fallback to fetch live open-source repositories:
+- **Repository Search (`POST /api/v1/search`)**: Asynchronously queries `https://api.github.com/search/repositories` using `httpx.AsyncClient`. Constructs valid GitHub qualifiers (`language:"Python"`, `stars:>=50`) and strips non-GitHub sort options to prevent 422 errors.
+- **Repository Metadata (`GET /api/v1/repositories/{id}`)**: Fetches complete repository details by `owner/repo` or numeric GitHub repository ID (`GET https://api.github.com/repositories/{id}`).
+- **Data Normalization & Resilience**: Maps raw GitHub payloads safely into Pydantic models with null-safe handlers for empty descriptions, null licenses, and missing languages.
+- **Rate Limit & Error Handling**: Inspects `X-RateLimit-*` headers, surfaces precise status codes (403 for rate limits with reset timestamp, 401 for bad tokens, 404 for missing repositories), and performs exponential backoff on transient 5xx/network errors.
+- **Token Security**: The token is consumed exclusively by the backend `GitHubService` via `GITHUB_TOKEN` environment variable and is never exposed to the frontend.
 
 ---
 
@@ -175,3 +176,4 @@ PostgreSQL serves as the single source of truth for repository cache, pre-comput
 2. **CORS Whitelisting**: Strict origin validation prevents unauthorized cross-origin calls from arbitrary web origins.
 3. **Input Sanitization**: Pydantic models validate all incoming payloads against injection, payload size limits, and type mismatches.
 4. **Git Protection**: Robust `.gitignore` prevents inadvertent commits of `.env` or sensitive local configs.
+

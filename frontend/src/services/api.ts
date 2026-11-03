@@ -1,3 +1,5 @@
+import type { GitHubSearchResponse, GitHubRepositoryItem } from '../types'
+
 export interface HealthResponse {
   status: string
   service: string
@@ -14,8 +16,11 @@ export interface RootResponse {
 export interface SearchApiPayload {
   query: string
   limit?: number
+  per_page?: number
   language?: string
   min_stars?: number
+  page?: number
+  sort?: string
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
@@ -28,7 +33,6 @@ export const apiService = {
   },
 
   async getHealth(): Promise<HealthResponse> {
-    // Supports v1 health check with fallback
     const res = await fetch(`${API_BASE_URL}/api/v1/health`)
     if (!res.ok) {
       const legacyRes = await fetch(`${API_BASE_URL}/api/health`)
@@ -38,13 +42,43 @@ export const apiService = {
     return res.json()
   },
 
-  async search(payload: SearchApiPayload) {
+  async search(payload: SearchApiPayload): Promise<GitHubSearchResponse> {
     const res = await fetch(`${API_BASE_URL}/api/v1/search`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
-    if (!res.ok) throw new Error(`Search request failed with status ${res.status}`)
+    if (!res.ok) {
+      let errorMsg = `Search request failed with status ${res.status}`
+      try {
+        const errJson = await res.json()
+        if (errJson?.error?.message) {
+          errorMsg = errJson.error.message
+        } else if (errJson?.detail) {
+          errorMsg = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail)
+        }
+      } catch {
+        // Fallback to generic message
+      }
+      throw new Error(errorMsg)
+    }
+    return res.json()
+  },
+
+  async getRepository(repositoryId: string | number): Promise<GitHubRepositoryItem> {
+    const res = await fetch(`${API_BASE_URL}/api/v1/repositories/${encodeURIComponent(repositoryId)}`)
+    if (!res.ok) {
+      let errorMsg = `Repository fetch failed with status ${res.status}`
+      try {
+        const errJson = await res.json()
+        if (errJson?.error?.message) {
+          errorMsg = errJson.error.message
+        }
+      } catch {
+        // Fallback to generic message
+      }
+      throw new Error(errorMsg)
+    }
     return res.json()
   },
 

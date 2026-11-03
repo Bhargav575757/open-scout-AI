@@ -30,3 +30,4 @@ def test_process_time_header_present():
     assert response.status_code == 200
     assert "X-Process-Time" in response.headers
     assert response.headers["X-Process-Time"].endswith("ms")
+

@@ -53,3 +53,4 @@ def get_logger(name: str) -> logging.Logger:
     Returns a configured logger instance for a given module name.
     """
     return logging.getLogger(name)
+

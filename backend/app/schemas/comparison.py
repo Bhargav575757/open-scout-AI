@@ -51,3 +51,4 @@ class ComparisonResponse(BaseModel):
         description="Development status message",
     )
     status: str = Field(default="development", description="Service response status")
+

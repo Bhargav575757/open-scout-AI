@@ -13,3 +13,4 @@ def test_get_history_returns_empty_collection():
     assert len(data["items"]) == 0
     assert data["total"] == 0
     assert "Phase 4+" in data["message"]
+

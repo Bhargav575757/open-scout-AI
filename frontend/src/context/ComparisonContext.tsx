@@ -5,8 +5,8 @@ import { mockRepositories } from '../data/mockData'
 interface ComparisonContextType {
   comparedIds: string[]
   comparedRepos: Repository[]
-  toggleComparison: (repoId: string) => void
-  addToComparison: (repoId: string) => void
+  toggleComparison: (repoId: string, repoData?: Repository) => void
+  addToComparison: (repoId: string, repoData?: Repository) => void
   removeFromComparison: (repoId: string) => void
   clearComparison: () => void
   isCompared: (repoId: string) => boolean
@@ -19,10 +19,9 @@ const ComparisonContext = createContext<ComparisonContextType | undefined>(undef
 const MAX_COMPARISON_LIMIT = 4
 
 export const ComparisonProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Pre-seed with the first two repositories for an immediate rich comparison experience
-  const [comparedIds, setComparedIds] = useState<string[]>(() => {
+  const [comparedRepos, setComparedRepos] = useState<Repository[]>(() => {
     try {
-      const saved = localStorage.getItem('openscout_compared_ids')
+      const saved = localStorage.getItem('openscout_compared_repos')
       if (saved) {
         const parsed = JSON.parse(saved)
         if (Array.isArray(parsed) && parsed.length > 0) return parsed
@@ -30,14 +29,14 @@ export const ComparisonProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     } catch {
       // Fallback
     }
-    return ['medibot-ai-fastapi', 'health-assistant-core']
+    return [mockRepositories[0], mockRepositories[1]]
   })
 
   const [notification, setNotification] = useState<string | null>(null)
 
   useEffect(() => {
-    localStorage.setItem('openscout_compared_ids', JSON.stringify(comparedIds))
-  }, [comparedIds])
+    localStorage.setItem('openscout_compared_repos', JSON.stringify(comparedRepos))
+  }, [comparedRepos])
 
   const showToast = (msg: string) => {
     setNotification(msg)
@@ -46,39 +45,66 @@ export const ComparisonProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }, 3500)
   }
 
-  const addToComparison = (repoId: string) => {
-    if (comparedIds.includes(repoId)) return
-    if (comparedIds.length >= MAX_COMPARISON_LIMIT) {
+  const comparedIds = comparedRepos.map((r) => r.id.toString())
+
+  const isCompared = (repoId: string) => {
+    const clean = repoId.toString().toLowerCase()
+    return comparedRepos.some((r) => r.id.toString().toLowerCase() === clean || (r.full_name && r.full_name.toLowerCase() === clean))
+  }
+
+  const addToComparison = (repoId: string, repoData?: Repository) => {
+    const clean = repoId.toString().toLowerCase()
+    if (isCompared(clean)) return
+
+    if (comparedRepos.length >= MAX_COMPARISON_LIMIT) {
       showToast(`Comparison limit reached (max ${MAX_COMPARISON_LIMIT} repositories).`)
       return
     }
-    const repo = mockRepositories.find((r) => r.id === repoId)
-    setComparedIds((prev) => [...prev, repoId])
-    showToast(`Added "${repo?.name || repoId}" to comparison.`)
+
+    const repoToAdd =
+      repoData ||
+      mockRepositories.find((r) => r.id.toString().toLowerCase() === clean) || {
+        id: repoId,
+        name: repoId.split('/').pop() || repoId,
+        owner: repoId.includes('/') ? repoId.split('/')[0] : 'github',
+        full_name: repoId,
+        description: 'GitHub repository',
+        stars: 0,
+        forks: 0,
+        topics: [],
+        githubUrl: `https://github.com/${repoId}`,
+        difficulty: 'Intermediate' as const,
+      }
+
+    setComparedRepos((prev) => [...prev, repoToAdd as Repository])
+    showToast(`Added "${repoToAdd.name || repoId}" to comparison.`)
   }
 
   const removeFromComparison = (repoId: string) => {
-    const repo = mockRepositories.find((r) => r.id === repoId)
-    setComparedIds((prev) => prev.filter((id) => id !== repoId))
-    showToast(`Removed "${repo?.name || repoId}" from comparison.`)
+    const clean = repoId.toString().toLowerCase()
+    const found = comparedRepos.find(
+      (r) => r.id.toString().toLowerCase() === clean || (r.full_name && r.full_name.toLowerCase() === clean)
+    )
+    setComparedRepos((prev) =>
+      prev.filter(
+        (r) => r.id.toString().toLowerCase() !== clean && (!r.full_name || r.full_name.toLowerCase() !== clean)
+      )
+    )
+    showToast(`Removed "${found?.name || repoId}" from comparison.`)
   }
 
-  const toggleComparison = (repoId: string) => {
-    if (comparedIds.includes(repoId)) {
+  const toggleComparison = (repoId: string, repoData?: Repository) => {
+    if (isCompared(repoId)) {
       removeFromComparison(repoId)
     } else {
-      addToComparison(repoId)
+      addToComparison(repoId, repoData)
     }
   }
 
   const clearComparison = () => {
-    setComparedIds([])
+    setComparedRepos([])
     showToast('Cleared all repositories from comparison.')
   }
-
-  const isCompared = (repoId: string) => comparedIds.includes(repoId)
-
-  const comparedRepos = mockRepositories.filter((r) => comparedIds.includes(r.id))
 
   return (
     <ComparisonContext.Provider

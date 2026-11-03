@@ -25,7 +25,7 @@ export const CompareDrawer: React.FC = () => {
                 <span className="truncate max-w-[100px]">{repo.name}</span>
                 <button
                   type="button"
-                  onClick={() => removeFromComparison(repo.id)}
+                  onClick={() => removeFromComparison(repo.id.toString())}
                   className="text-zinc-400 hover:text-rose-500 transition-colors"
                   aria-label={`Remove ${repo.name} from comparison`}
                 >
@@ -59,3 +59,4 @@ export const CompareDrawer: React.FC = () => {
     </div>
   )
 }
+

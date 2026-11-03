@@ -1,13 +1,14 @@
 import re
 from fastapi import APIRouter, Path, status
-from app.core.exceptions import ResourceNotFoundException, ValidationException
+from app.core.exceptions import ValidationException
 from app.core.logging import get_logger
 from app.schemas.repository import RepositoryResponse
+from app.services.github_service import github_service
 
 logger = get_logger("app.api.repositories")
 router = APIRouter(tags=["Repositories"])
 
-# Regex for valid repository identifiers: slug like 'medibot-ai' or owner/repo like 'healthtech/medibot'
+# Regex for valid repository identifiers: slug like 'medibot-ai' or owner/repo like 'healthtech/medibot' or numeric id '123456'
 REPO_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_\-\.]+(/[a-zA-Z0-9_\-\.]+)?$")
 
 
@@ -15,11 +16,10 @@ REPO_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_\-\.]+(/[a-zA-Z0-9_\-\.]+)?$")
     "/repositories/{repository_id:path}",
     response_model=RepositoryResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get Repository By Identifier",
+    summary="Get GitHub Repository Metadata",
     description=(
-        "Retrieves detailed metadata for a specific repository by its unique identifier or owner/repo slug. "
-        "In Phase 3, this validates the identifier format and returns a clean 404 response indicating "
-        "live data ingestion is scheduled for Phase 4 (GitHub API integration)."
+        "Retrieves structured metadata for a repository from GitHub using either a namespaced "
+        "'owner/repo' path, a numeric repository ID, or an identifier slug."
     ),
 )
 async def get_repository_by_id(
@@ -27,8 +27,8 @@ async def get_repository_by_id(
         ...,
         min_length=1,
         max_length=120,
-        description="Repository slug identifier or owner/repo path",
-        examples=["medibot-ai-fastapi"],
+        description="Repository 'owner/repo' path, numeric ID, or name slug",
+        examples=["healthtech-labs/medibot-ai"],
     ),
 ) -> RepositoryResponse:
     clean_id = repository_id.strip()
@@ -39,14 +39,5 @@ async def get_repository_by_id(
             details={"field": "repository_id", "value": repository_id},
         )
 
-    logger.info("Repository lookup requested for id='%s'", clean_id)
-
-    # In Phase 3, no database or live GitHub API fetching is implemented yet.
-    # Return an explicit, structured 404 Resource Not Found.
-    raise ResourceNotFoundException(
-        message=(
-            f"Repository '{clean_id}' was not found. "
-            "Live repository crawling and vector storage are staged for Phase 4 (GitHub REST API integration)."
-        ),
-        details={"repository_id": clean_id, "status": "staged_for_phase_4"},
-    )
+    logger.info("Fetching repository metadata for id='%s'", clean_id)
+    return await github_service.get_repository(clean_id)

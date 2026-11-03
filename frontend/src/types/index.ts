@@ -1,31 +1,39 @@
 export type DifficultyLevel = 'Beginner' | 'Intermediate' | 'Advanced'
 
 export interface Repository {
-  id: string
+  id: string | number
   name: string
+  full_name?: string
   owner: string
   ownerAvatar?: string
-  description: string
-  language: string
+  owner_avatar_url?: string | null
+  description?: string | null
+  language?: string | null
   stars: number
   forks: number
-  watchers: number
-  openIssues: number
-  license: string
-  lastUpdated: string
+  watchers?: number
+  watchers_count?: number | null
+  openIssues?: number
+  open_issues_count?: number | null
+  license?: string | null
+  lastUpdated?: string
+  updated_at?: string | null
+  created_at?: string | null
   topics: string[]
-  difficulty: DifficultyLevel
-  matchReason: string
+  difficulty?: DifficultyLevel
+  matchReason?: string
   githubUrl: string
-  readmePreview: string
-  installationInstructions: string
-  docQualityScore: number
-  technologies: string[]
-  suitabilitySummary: string
+  html_url?: string
+  readmePreview?: string
+  installationInstructions?: string
+  docQualityScore?: number
+  technologies?: string[]
+  suitabilitySummary?: string
   defaultBranch?: string
+  isLiveGitHub?: boolean
 }
 
-export type SortOption = 'relevance' | 'stars' | 'updated'
+export type SortOption = 'relevance' | 'stars' | 'updated' | 'forks'
 
 export interface FilterState {
   searchQuery: string
@@ -35,6 +43,41 @@ export interface FilterState {
   licenses: string[]
   recentlyUpdatedOnly: boolean
   sortBy: SortOption
+  language?: string
+  page?: number
+  perPage?: number
+}
+
+export interface GitHubRepositoryItem {
+  id: number | string
+  name: string
+  full_name: string
+  owner: string
+  owner_avatar_url?: string | null
+  description?: string | null
+  html_url: string
+  language?: string | null
+  stars: number
+  forks: number
+  stargazers_count?: number
+  forks_count?: number
+  open_issues_count?: number | null
+  watchers_count?: number | null
+  topics: string[]
+  license?: string | null
+  created_at?: string | null
+  updated_at?: string | null
+  default_branch?: string | null
+}
+
+export interface GitHubSearchResponse {
+  query: string
+  total_count: number
+  page: number
+  per_page: number
+  items: GitHubRepositoryItem[]
+  message?: string
+  status?: string
 }
 
 export interface SearchHistoryItem {

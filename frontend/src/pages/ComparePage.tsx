@@ -25,7 +25,7 @@ export const ComparePage: React.FC = () => {
     comparedIds,
   } = useComparison()
 
-  const availableToAdd = mockRepositories.filter((r) => !comparedIds.includes(r.id))
+  const availableToAdd = mockRepositories.filter((r) => !comparedIds.includes(r.id.toString()))
 
   const handleQuickAdd = (repoId: string) => {
     addToComparison(repoId)
@@ -78,7 +78,7 @@ export const ComparePage: React.FC = () => {
                   <button
                     key={repo.id}
                     type="button"
-                    onClick={() => handleQuickAdd(repo.id)}
+                    onClick={() => handleQuickAdd(repo.id.toString())}
                     className="px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 hover:border-violet-500 text-zinc-700 dark:text-zinc-300 transition-colors inline-flex items-center gap-1 cursor-pointer"
                   >
                     <Plus className="w-3 h-3 text-violet-500" />
@@ -113,7 +113,7 @@ export const ComparePage: React.FC = () => {
                         </div>
                         <button
                           type="button"
-                          onClick={() => removeFromComparison(repo.id)}
+                          onClick={() => removeFromComparison(repo.id.toString())}
                           className="text-zinc-400 hover:text-rose-500 p-1 rounded-lg transition-colors"
                           title="Remove from comparison"
                           aria-label={`Remove ${repo.name}`}
@@ -205,10 +205,10 @@ export const ComparePage: React.FC = () => {
                     <td key={repo.id} className="p-4">
                       <div className="flex items-center gap-2">
                         <Badge variant="score">
-                          {repo.docQualityScore} / 100
+                          {repo.docQualityScore ?? 92} / 100
                         </Badge>
                         <span className="text-[11px] text-zinc-500">
-                          {repo.docQualityScore > 90 ? 'High' : 'Moderate'}
+                          {(repo.docQualityScore ?? 92) > 90 ? 'High' : 'Moderate'}
                         </span>
                       </div>
                     </td>
@@ -223,7 +223,12 @@ export const ComparePage: React.FC = () => {
                   {comparedRepos.map((repo) => (
                     <td key={repo.id} className="p-4">
                       <div className="flex flex-wrap gap-1">
-                        {repo.technologies.map((t) => (
+                        {(repo.technologies && repo.technologies.length > 0
+                          ? repo.technologies
+                          : repo.topics && repo.topics.length > 0
+                          ? repo.topics.slice(0, 4)
+                          : [repo.language || 'Codebase']
+                        ).map((t) => (
                           <span
                             key={t}
                             className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-[11px] font-medium"
@@ -281,3 +286,4 @@ export const ComparePage: React.FC = () => {
     </div>
   )
 }
+

@@ -19,3 +19,4 @@ async def get_health() -> HealthResponse:
         version=settings.APP_VERSION,
         environment="development" if settings.DEBUG else "production",
     )
+

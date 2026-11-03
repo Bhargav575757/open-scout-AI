@@ -30,3 +30,4 @@ This package defines data models, relational tables, and vector schemas for subs
    - `extracted_criteria`: JSON breakdown of Mistral-parsed requirements.
    - `created_at`: Interaction timestamp.
    - `result_count`: Number of returned candidates.
+
