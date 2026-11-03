@@ -69,22 +69,26 @@ The frontend and backend interact via standard JSON-over-HTTPS REST endpoints.
 
 ---
 
-## 4. Planned Mistral AI Integration
+## 4. Mistral AI Query Understanding (Phase 5 Implemented)
 
-Mistral AI is the primary LLM provider for OpenScout. Gemini and OpenAI APIs are explicitly excluded.
+Mistral AI is the primary LLM provider for OpenScout. The platform utilizes `mistral-small-latest` via the official Mistral Python SDK with structured JSON enforcement:
 
-### Core LLM Responsibilities
-1. **Query Parsing & Intent Decomposition**:
-   - Extract technical stack requirements (`Python`, `FastAPI`, `React`).
-   - Extract domain constraints (`healthcare`, `e-commerce`).
-   - Extract repository quality preferences (`beginner-friendly`, `good documentation`, `active maintenance`).
-   - Output structured JSON matching backend Pydantic models via Mistral JSON mode.
-2. **Recommendation Explanations**:
-   - Synthesize a concise justification for why a discovered repository fits the user's specific request and skill level.
-3. **Repository Comparison Engine**:
-   - Compare architectural choices, documentation quality, and maintenance status across 2 to 4 projects.
-4. **RAG-based Repository Chat**:
-   - Answer queries grounded strictly in repository READMEs, setup guides, and code structure.
+### Core Responsibilities
+1. **Query Parsing & Intent Decomposition (`POST /api/v1/understand-query`)**:
+   - Decomposes free-form natural language queries into strongly-typed `ProjectRequirements`.
+   - Extracts technical domain (`Healthcare AI`, `DevOps`, `FinTech`), archetype (`Chatbot`, `REST API`), and target experience level (`Beginner`, `Intermediate`, `Advanced`).
+   - Distinguishes programming languages (e.g., Python, TypeScript) from frameworks (e.g., React, FastAPI), preventing LLM hallucinations.
+   - Extracts minimum star thresholds and documentation preferences.
+   - Formulates optimized GitHub search queries (`github_search_query`).
+2. **AI-Powered Repository Discovery (`POST /api/v1/ai-search`)**:
+   - Chains Mistral requirement extraction directly to `GitHubService.search_repositories`.
+   - Applies extracted or overridden language qualifiers and star minimums.
+   - Returns both extracted requirements and verified, live GitHub repositories.
+3. **Resilience & Security**:
+   - Strict API key isolation (`MISTRAL_API_KEY` exists exclusively in backend settings).
+   - Fast failure for invalid credentials (HTTP 401) and rate limits (HTTP 429).
+   - Exponential backoff retry on transient 5xx errors or network timeouts.
+   - Fallback and input length validation guarding against prompt injections.
 
 ---
 

@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     """
 
     APP_NAME: str = Field(default="OpenScout API", description="Name of the application")
-    APP_VERSION: str = Field(default="0.4.0", description="Semver application version")
+    APP_VERSION: str = Field(default="0.5.0", description="Semver application version")
     DEBUG: bool = Field(default=False, description="Enable debug mode and verbose logging")
     API_V1_PREFIX: str = Field(default="/api/v1", description="Prefix for Version 1 API endpoints")
     PORT: int = Field(default=8000, description="Port on which the application listens")
@@ -43,11 +43,25 @@ class Settings(BaseSettings):
         description="Maximum retry attempts for transient GitHub errors (5xx/timeouts)",
     )
 
-    # Future AI & Database Integrations (Phase 5+)
+    # Mistral AI Configuration (Phase 5)
     MISTRAL_API_KEY: str = Field(
         default="",
-        description="Mistral AI API Key for intent extraction and reasoning",
+        description="Mistral AI API Key for natural language query understanding",
     )
+    MISTRAL_MODEL: str = Field(
+        default="mistral-small-latest",
+        description="Mistral AI model identifier for query understanding and reasoning",
+    )
+    MISTRAL_API_TIMEOUT: float = Field(
+        default=30.0,
+        description="HTTP request timeout in seconds for Mistral API calls",
+    )
+    MISTRAL_MAX_RETRIES: int = Field(
+        default=2,
+        description="Maximum retry attempts for transient Mistral errors (5xx/timeouts)",
+    )
+
+    # Database Integrations (Phase 6+)
     DATABASE_URL: str = Field(
         default="",
         description="PostgreSQL connection string with pgvector extension",

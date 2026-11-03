@@ -345,3 +345,4 @@ class GitHubService:
 
 # Global singleton instance
 github_service = GitHubService()
+

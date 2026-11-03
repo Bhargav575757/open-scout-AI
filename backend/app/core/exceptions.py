@@ -140,6 +140,88 @@ class GitHubUpstreamException(GitHubAPIException):
         )
 
 
+class MistralAPIException(OpenScoutException):
+    """Base exception for errors communicating with the Mistral AI API."""
+
+    def __init__(
+        self,
+        message: str,
+        code: str = "MISTRAL_API_ERROR",
+        status_code: int = status.HTTP_502_BAD_GATEWAY,
+        details: Optional[Any] = None,
+    ):
+        super().__init__(
+            message=message,
+            code=code,
+            status_code=status_code,
+            details=details,
+        )
+
+
+class MistralAuthException(MistralAPIException):
+    """Raised when Mistral API authentication fails (missing or invalid API key)."""
+
+    def __init__(
+        self,
+        message: str = "Mistral API authentication failed. Please configure a valid MISTRAL_API_KEY.",
+        details: Optional[Any] = None,
+    ):
+        super().__init__(
+            message=message,
+            code="MISTRAL_AUTH_FAILED",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            details=details,
+        )
+
+
+class MistralRateLimitException(MistralAPIException):
+    """Raised when Mistral API rate limit is exceeded."""
+
+    def __init__(
+        self,
+        message: str = "Mistral AI API rate limit exceeded. Please wait a moment before retrying.",
+        details: Optional[Any] = None,
+    ):
+        super().__init__(
+            message=message,
+            code="MISTRAL_RATE_LIMIT_EXCEEDED",
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            details=details,
+        )
+
+
+class MistralMalformedResponseException(MistralAPIException):
+    """Raised when Mistral returns an unparseable or invalid response structure."""
+
+    def __init__(
+        self,
+        message: str = "Mistral AI returned a malformed or unparseable response.",
+        details: Optional[Any] = None,
+    ):
+        super().__init__(
+            message=message,
+            code="MISTRAL_MALFORMED_RESPONSE",
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            details=details,
+        )
+
+
+class MistralUpstreamException(MistralAPIException):
+    """Raised when Mistral AI returns transient 5xx errors or network timeouts."""
+
+    def __init__(
+        self,
+        message: str = "Mistral AI is currently unreachable or experiencing service degradation. Please try again later.",
+        details: Optional[Any] = None,
+    ):
+        super().__init__(
+            message=message,
+            code="MISTRAL_UPSTREAM_ERROR",
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            details=details,
+        )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """
     Registers centralized exception handlers to format all errors into a uniform JSON structure.

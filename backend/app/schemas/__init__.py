@@ -8,6 +8,14 @@ from app.schemas.common import (
 )
 from app.schemas.comparison import ComparisonRequest, ComparisonResponse
 from app.schemas.history import HistoryItem, HistoryResponse
+from app.schemas.query_understanding import (
+    AISearchRequest,
+    AISearchResponse,
+    DifficultyLevel,
+    ProjectRequirements,
+    UnderstandQueryRequest,
+    UnderstandQueryResponse,
+)
 from app.schemas.repository import RepositoryResponse
 from app.schemas.search import SearchRequest, SearchResponse
 
@@ -25,5 +33,11 @@ __all__ = [
     "ComparisonResponse",
     "HistoryItem",
     "HistoryResponse",
+    "ProjectRequirements",
+    "DifficultyLevel",
+    "UnderstandQueryRequest",
+    "UnderstandQueryResponse",
+    "AISearchRequest",
+    "AISearchResponse",
 ]
 

@@ -225,12 +225,14 @@ npm run dev
   - Production-ready FastAPI architecture with Pydantic v2 schemas, centralized settings, structured JSON/color logging, global error handling middleware, and modular routers (`/api/v1/search`, `/api/v1/repositories`, `/api/v1/compare`, `/api/v1/history`).
 - [x] **Phase 4: GitHub REST API Integration** *(Completed)*
   - Async GitHub REST API client using HTTPX, live repository search with qualifiers (`language:`, `stars:>=`), owner/repo and ID lookup, rate-limit header parsing (`X-RateLimit-*`), exponential backoff on transient errors, and end-to-end integration with the React Discover and Repository Details UI.
-- [ ] **Phase 5: Mistral AI Intent Extraction & Semantic Search**
-  - Natural language intent extraction with Mistral AI, prompt engineering with structured Pydantic outputs, Sentence Transformers embeddings, and pgvector semantic matching.
-- [ ] **Phase 6: Multi-Repository Comparison Engine & AI Explanations**
+- [x] **Phase 5: Mistral AI Integration & Natural Language Query Understanding** *(Completed)*
+  - Official Mistral Python SDK (`mistral-small-latest`), structured prompt engineering, `ProjectRequirements` schema validation, defense against hallucinated languages vs frameworks, `POST /api/v1/understand-query`, end-to-end `POST /api/v1/ai-search` chained to GitHubService, and interactive frontend "Understanding your requirements" UI.
+- [ ] **Phase 6: Semantic Search & pgvector Embeddings Pipeline**
+  - Database schema migrations, vector embedding generation with Sentence Transformers, and pgvector cosine distance hybrid ranking.
+- [ ] **Phase 7: Multi-Repository Comparison Engine & AI Explanations**
   - Side-by-side technical comparison matrices, documentation depth scoring, and tailored AI justifications.
-- [ ] **Phase 7: RAG-Powered Repository Q&A Chatbot**
+- [ ] **Phase 8: RAG-Powered Repository Q&A Chatbot**
   - In-browser repository documentation chunking, contextual vector retrieval, and conversational query handling.
-- [ ] **Phase 8: Production Hardening, CI/CD, and Cloud Deployment**
+- [ ] **Phase 9: Production Hardening, CI/CD, and Cloud Deployment**
   - GitHub Actions CI/CD pipelines, Vercel frontend deployment, and Render backend & managed database provisioning.
 

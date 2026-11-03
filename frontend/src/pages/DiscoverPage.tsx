@@ -10,15 +10,18 @@ import {
   AlertTriangle,
   RotateCcw,
   FolderGit2,
+  Bot,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { PageHeader } from '../components/layout/PageHeader'
 import { SearchBar } from '../components/search/SearchBar'
 import { RepositoryCard } from '../components/repository/RepositoryCard'
+import { RequirementsCard } from '../components/search/RequirementsCard'
 import { LoadingState } from '../components/common/LoadingState'
 import { EmptyState } from '../components/common/EmptyState'
 import { apiService } from '../services/api'
 import { mockExamplePrompts } from '../data/mockData'
-import type { Repository, GitHubRepositoryItem } from '../types'
+import type { Repository, GitHubRepositoryItem, ProjectRequirements } from '../types'
 
 const AVAILABLE_LANGUAGES = [
   'All Languages',
@@ -43,8 +46,10 @@ const STAR_OPTIONS = [
 export const DiscoverPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const initialQuery = searchParams.get('q') || ''
+  const initialMode = (searchParams.get('mode') as 'ai' | 'direct') || 'ai'
 
   const [query, setQuery] = useState(initialQuery)
+  const [searchMode, setSearchMode] = useState<'ai' | 'direct'>(initialMode)
   const [selectedLanguage, setSelectedLanguage] = useState<string>('All Languages')
   const [minStars, setMinStars] = useState<number>(0)
   const [sortBy, setSortBy] = useState<string>('stars')
@@ -52,6 +57,7 @@ export const DiscoverPage: React.FC = () => {
   const perPage = 10
 
   const [repositories, setRepositories] = useState<Repository[]>([])
+  const [extractedRequirements, setExtractedRequirements] = useState<ProjectRequirements | null>(null)
   const [totalCount, setTotalCount] = useState<number>(0)
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
@@ -80,7 +86,10 @@ export const DiscoverPage: React.FC = () => {
       updated_at: item.updated_at,
       created_at: item.created_at,
       topics: item.topics || [],
-      matchReason: `Live GitHub repository matching "${query}" with ${item.stars ?? 0} stars.`,
+      matchReason:
+        searchMode === 'ai' && extractedRequirements
+          ? `Discovered via Mistral AI criteria matching "${extractedRequirements.domain || 'concept'}"`
+          : `Live GitHub repository matching "${query}"`,
       defaultBranch: item.default_branch || 'main',
       isLiveGitHub: true,
     }
@@ -89,6 +98,7 @@ export const DiscoverPage: React.FC = () => {
   const executeSearch = useCallback(
     async (
       searchQuery: string,
+      mode: 'ai' | 'direct',
       lang: string,
       stars: number,
       sort: string,
@@ -97,6 +107,7 @@ export const DiscoverPage: React.FC = () => {
       const trimmed = searchQuery.trim()
       if (!trimmed) {
         setRepositories([])
+        setExtractedRequirements(null)
         setTotalCount(0)
         setHasSearched(false)
         setError(null)
@@ -108,21 +119,39 @@ export const DiscoverPage: React.FC = () => {
       setHasSearched(true)
 
       try {
-        const response = await apiService.search({
-          query: trimmed,
-          language: lang !== 'All Languages' ? lang : undefined,
-          min_stars: stars > 0 ? stars : undefined,
-          sort: sort !== 'best-match' ? sort : undefined,
-          page: targetPage,
-          limit: perPage,
-        })
+        if (mode === 'ai') {
+          const aiResponse = await apiService.aiSearch({
+            query: trimmed,
+            page: targetPage,
+            per_page: perPage,
+            sort: sort !== 'best-match' ? sort : undefined,
+            language_override: lang !== 'All Languages' ? lang : undefined,
+            min_stars_override: stars > 0 ? stars : undefined,
+          })
 
-        const mapped = (response.items || []).map(mapGitHubItemToRepo)
-        setRepositories(mapped)
-        setTotalCount(response.total_count || 0)
-        setPage(response.page || targetPage)
+          setExtractedRequirements(aiResponse.requirements)
+          const mapped = (aiResponse.items || []).map(mapGitHubItemToRepo)
+          setRepositories(mapped)
+          setTotalCount(aiResponse.total_count || 0)
+          setPage(aiResponse.page || targetPage)
+        } else {
+          setExtractedRequirements(null)
+          const response = await apiService.search({
+            query: trimmed,
+            language: lang !== 'All Languages' ? lang : undefined,
+            min_stars: stars > 0 ? stars : undefined,
+            sort: sort !== 'best-match' ? sort : undefined,
+            page: targetPage,
+            limit: perPage,
+          })
+
+          const mapped = (response.items || []).map(mapGitHubItemToRepo)
+          setRepositories(mapped)
+          setTotalCount(response.total_count || 0)
+          setPage(response.page || targetPage)
+        }
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Failed to search GitHub repositories'
+        const msg = err instanceof Error ? err.message : 'Search request failed'
         setError(msg)
         setRepositories([])
         setTotalCount(0)
@@ -133,27 +162,38 @@ export const DiscoverPage: React.FC = () => {
     [perPage]
   )
 
-  // Trigger search on mount if query param present, or sync query param
+  // Trigger search on mount if query param present
   useEffect(() => {
     const q = searchParams.get('q') || ''
+    const m = (searchParams.get('mode') as 'ai' | 'direct') || searchMode
     if (q) {
       setQuery(q)
-      executeSearch(q, selectedLanguage, minStars, sortBy, 1)
+      setSearchMode(m)
+      executeSearch(q, m, selectedLanguage, minStars, sortBy, 1)
     }
   }, [searchParams])
 
   const handleSearchSubmit = (newQuery: string) => {
     setQuery(newQuery)
     setPage(1)
-    setSearchParams(newQuery ? { q: newQuery } : {})
-    executeSearch(newQuery, selectedLanguage, minStars, sortBy, 1)
+    setSearchParams(newQuery ? { q: newQuery, mode: searchMode } : {})
+    executeSearch(newQuery, searchMode, selectedLanguage, minStars, sortBy, 1)
+  }
+
+  const handleModeSwitch = (mode: 'ai' | 'direct') => {
+    setSearchMode(mode)
+    setPage(1)
+    if (query.trim()) {
+      setSearchParams({ q: query, mode })
+      executeSearch(query, mode, selectedLanguage, minStars, sortBy, 1)
+    }
   }
 
   const handleLanguageChange = (lang: string) => {
     setSelectedLanguage(lang)
     setPage(1)
     if (query.trim()) {
-      executeSearch(query, lang, minStars, sortBy, 1)
+      executeSearch(query, searchMode, lang, minStars, sortBy, 1)
     }
   }
 
@@ -161,7 +201,7 @@ export const DiscoverPage: React.FC = () => {
     setMinStars(stars)
     setPage(1)
     if (query.trim()) {
-      executeSearch(query, selectedLanguage, stars, sortBy, 1)
+      executeSearch(query, searchMode, selectedLanguage, stars, sortBy, 1)
     }
   }
 
@@ -169,14 +209,14 @@ export const DiscoverPage: React.FC = () => {
     setSortBy(newSort)
     setPage(1)
     if (query.trim()) {
-      executeSearch(query, selectedLanguage, minStars, newSort, 1)
+      executeSearch(query, searchMode, selectedLanguage, minStars, newSort, 1)
     }
   }
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage)
     window.scrollTo({ top: 0, behavior: 'smooth' })
-    executeSearch(query, selectedLanguage, minStars, sortBy, newPage)
+    executeSearch(query, searchMode, selectedLanguage, minStars, sortBy, newPage)
   }
 
   const handleResetFilters = () => {
@@ -185,7 +225,7 @@ export const DiscoverPage: React.FC = () => {
     setSortBy('stars')
     setPage(1)
     if (query.trim()) {
-      executeSearch(query, 'All Languages', 0, 'stars', 1)
+      executeSearch(query, searchMode, 'All Languages', 0, 'stars', 1)
     }
   }
 
@@ -194,11 +234,51 @@ export const DiscoverPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       <PageHeader
-        title="Discover GitHub Repositories"
-        description="Search real-time open-source repositories from the official GitHub REST API based on technical concepts and requirements."
-        badgeText="GitHub REST API v3"
+        title="Discover GitHub Projects"
+        description="Search open-source repositories using natural language AI reasoning with Mistral AI or direct GitHub queries."
+        badgeText={searchMode === 'ai' ? 'Powered by Mistral AI' : 'GitHub REST API v3'}
         showDemoBadge={false}
       />
+
+      {/* Mode Switcher Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 rounded-2xl bg-zinc-100/80 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
+        <div className="flex items-center gap-1.5 p-1 bg-white dark:bg-zinc-800/80 rounded-xl border border-zinc-200/60 dark:border-zinc-700/60">
+          <button
+            type="button"
+            onClick={() => handleModeSwitch('ai')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              searchMode === 'ai'
+                ? 'bg-violet-600 text-white shadow-sm'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>AI Natural Language</span>
+            <span className="hidden sm:inline-block text-[10px] px-1.5 py-0.2 rounded-full bg-violet-500/30 text-white font-mono">
+              Mistral
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleModeSwitch('direct')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              searchMode === 'direct'
+                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-sm'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+            }`}
+          >
+            <FolderGit2 className="w-3.5 h-3.5" />
+            <span>Direct GitHub Search</span>
+          </button>
+        </div>
+
+        <span className="text-[11px] text-zinc-500 dark:text-zinc-400 px-2">
+          {searchMode === 'ai'
+            ? 'Decomposes intent, languages, frameworks, & difficulty with Mistral AI.'
+            : 'Performs raw keyword query and qualifiers directly on GitHub API.'}
+        </span>
+      </div>
 
       {/* Search Header Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -206,7 +286,11 @@ export const DiscoverPage: React.FC = () => {
           <SearchBar
             initialQuery={query}
             onSearch={handleSearchSubmit}
-            placeholder="Search GitHub repositories (e.g. AI healthcare chatbot Python React)..."
+            placeholder={
+              searchMode === 'ai'
+                ? 'Describe your project (e.g. "I want a beginner-friendly healthcare chatbot using Python and React")...'
+                : 'Search GitHub keywords (e.g. "healthcare chatbot Python React")...'
+            }
             isLoading={isLoading}
           />
         </div>
@@ -246,9 +330,9 @@ export const DiscoverPage: React.FC = () => {
         <aside className="hidden lg:block lg:col-span-1 sticky top-20 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 p-5 space-y-6">
           <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
             <div className="flex items-center gap-2">
-              <FilterIcon className="w-4 h-4 text-violet-500" />
+              <SlidersHorizontal className="w-4 h-4 text-violet-500" />
               <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                GitHub Filters
+                Filters & Overrides
               </h3>
             </div>
             {(selectedLanguage !== 'All Languages' || minStars > 0) && (
@@ -309,13 +393,15 @@ export const DiscoverPage: React.FC = () => {
             </div>
           </div>
 
-          {/* GitHub Live API Badge */}
-          <div className="p-3 rounded-xl bg-violet-500/5 border border-violet-500/10 text-[11px] text-zinc-500 dark:text-zinc-400">
-            <div className="flex items-center gap-1.5 text-violet-600 dark:text-violet-400 font-semibold mb-1">
-              <FolderGit2 className="w-3.5 h-3.5" />
-              <span>Real GitHub Data</span>
+          {/* AI Info Card */}
+          <div className="p-3.5 rounded-xl bg-violet-500/5 border border-violet-500/15 text-[11px] text-zinc-500 dark:text-zinc-400 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-violet-600 dark:text-violet-400 font-semibold">
+              <Bot className="w-3.5 h-3.5" />
+              <span>Mistral Intent Engine</span>
             </div>
-            Repositories fetched live using qualifiers like <code>language:Python</code> and <code>stars:&gt;=10</code>.
+            <p>
+              Natural language queries are decomposed into domains, technologies, and difficulty to search live GitHub projects.
+            </p>
           </div>
         </aside>
 
@@ -327,7 +413,7 @@ export const DiscoverPage: React.FC = () => {
               <div className="flex items-center gap-2 text-violet-700 dark:text-violet-300">
                 <Sparkles className="w-4 h-4 text-violet-500 shrink-0" />
                 <span>
-                  GitHub Query:{' '}
+                  {searchMode === 'ai' ? 'AI Search Query:' : 'Direct GitHub Query:'}{' '}
                   <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
                     &ldquo;{query}&rdquo;
                   </strong>
@@ -345,20 +431,39 @@ export const DiscoverPage: React.FC = () => {
             </div>
           )}
 
+          {/* Understanding Your Requirements Section */}
+          {searchMode === 'ai' && extractedRequirements && (
+            <RequirementsCard
+              requirements={extractedRequirements}
+              onApplyLanguageFilter={handleLanguageChange}
+            />
+          )}
+
           {/* Error Alert */}
           {error && (
             <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 flex items-start gap-3 text-xs">
               <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
-              <div className="space-y-1">
+              <div className="space-y-1 flex-1">
                 <p className="font-bold">Search Error</p>
                 <p>{error}</p>
-                <button
-                  type="button"
-                  onClick={() => executeSearch(query, selectedLanguage, minStars, sortBy, page)}
-                  className="mt-2 text-xs font-semibold underline cursor-pointer"
-                >
-                  Retry Search
-                </button>
+                <div className="pt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => executeSearch(query, searchMode, selectedLanguage, minStars, sortBy, page)}
+                    className="px-2.5 py-1 rounded-md bg-rose-600 text-white font-semibold text-[11px] hover:bg-rose-700 cursor-pointer"
+                  >
+                    Retry
+                  </button>
+                  {searchMode === 'ai' && (
+                    <button
+                      type="button"
+                      onClick={() => handleModeSwitch('direct')}
+                      className="px-2.5 py-1 rounded-md border border-rose-400/40 text-rose-700 dark:text-rose-300 font-semibold text-[11px] hover:bg-rose-500/10 cursor-pointer"
+                    >
+                      Try Direct GitHub Search Instead
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -366,22 +471,30 @@ export const DiscoverPage: React.FC = () => {
           {/* Content States */}
           {isLoading ? (
             <LoadingState
-              message="Querying GitHub REST API..."
-              subtext="Retrieving verified repositories, stargazer counts, and metadata"
+              message={
+                searchMode === 'ai'
+                  ? 'Understanding requirements with Mistral AI...'
+                  : 'Querying GitHub REST API...'
+              }
+              subtext={
+                searchMode === 'ai'
+                  ? 'Decomposing technical constraints, identifying domain, and matching live repositories'
+                  : 'Retrieving verified repositories, stargazer counts, and metadata'
+              }
             />
           ) : !hasSearched && !query ? (
             <div className="py-12 px-6 rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-800 bg-white/40 dark:bg-zinc-900/40 text-center space-y-4">
               <div className="w-12 h-12 rounded-2xl bg-violet-600/10 text-violet-600 dark:text-violet-400 flex items-center justify-center mx-auto">
-                <FolderGit2 className="w-6 h-6" />
+                <Sparkles className="w-6 h-6" />
               </div>
               <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
-                Ready to search live open-source repositories
+                Discover Open Source Projects using Natural Language
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">
-                Enter your technical stack or project concept in the search bar above to fetch actual public repositories from GitHub.
+                Describe your project idea, architecture, tech stack, or skill level in plain English. Mistral AI extracts your requirements and finds live GitHub repositories.
               </p>
               <div className="pt-2 flex flex-wrap justify-center gap-2">
-                {mockExamplePrompts.slice(0, 3).map((prompt) => (
+                {mockExamplePrompts.slice(0, 4).map((prompt) => (
                   <button
                     key={prompt}
                     type="button"
@@ -395,8 +508,8 @@ export const DiscoverPage: React.FC = () => {
             </div>
           ) : repositories.length === 0 ? (
             <EmptyState
-              title="No repositories found on GitHub"
-              description="No public GitHub repositories matched your search query and filters. Try broadening your keywords or lowering your star threshold."
+              title="No repositories found"
+              description="No public GitHub repositories matched your search query and filters. Try adjusting your description or resetting language/stars filters."
               onAction={handleResetFilters}
               actionLabel="Reset Filters"
             />
@@ -450,7 +563,7 @@ export const DiscoverPage: React.FC = () => {
           <div className="w-full max-w-xs bg-white dark:bg-zinc-900 h-full p-5 overflow-y-auto space-y-4 shadow-2xl animate-in slide-in-from-right duration-200">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800">
               <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                GitHub Filters
+                Filters & Mode
               </h3>
               <button
                 type="button"
@@ -462,6 +575,36 @@ export const DiscoverPage: React.FC = () => {
             </div>
 
             <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold uppercase text-zinc-400 block mb-2">
+                  Search Mode
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleModeSwitch('ai')}
+                    className={`py-2 rounded-lg text-xs font-semibold border ${
+                      searchMode === 'ai'
+                        ? 'bg-violet-600 text-white border-violet-600'
+                        : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300'
+                    }`}
+                  >
+                    AI Mode
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleModeSwitch('direct')}
+                    className={`py-2 rounded-lg text-xs font-semibold border ${
+                      searchMode === 'direct'
+                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                        : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300'
+                    }`}
+                  >
+                    Direct
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="text-xs font-semibold uppercase text-zinc-400 block mb-2">
                   Language

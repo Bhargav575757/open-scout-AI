@@ -80,6 +80,35 @@ export interface GitHubSearchResponse {
   status?: string
 }
 
+export interface ProjectRequirements {
+  domain?: string | null
+  project_type?: string | null
+  programming_languages: string[]
+  frameworks: string[]
+  technologies: string[]
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced' | 'Unknown'
+  min_stars?: number | null
+  documentation_preference?: string | null
+  keywords: string[]
+  github_search_query: string
+  summary: string
+}
+
+export interface UnderstandQueryResponse {
+  success: boolean
+  requirements: ProjectRequirements
+}
+
+export interface AISearchResponse {
+  success: boolean
+  query: string
+  requirements: ProjectRequirements
+  total_count: number
+  page: number
+  per_page: number
+  items: GitHubRepositoryItem[]
+}
+
 export interface SearchHistoryItem {
   id: string
   query: string

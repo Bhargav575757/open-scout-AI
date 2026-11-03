@@ -280,3 +280,4 @@ async def test_query_filtering_and_pagination_parameters():
         assert params["order"] == "desc"
         assert "language:TypeScript" in params["q"]
         assert "stars:>=50" in params["q"]
+

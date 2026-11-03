@@ -1,4 +1,9 @@
-import type { GitHubSearchResponse, GitHubRepositoryItem } from '../types'
+import type {
+  GitHubSearchResponse,
+  GitHubRepositoryItem,
+  AISearchResponse,
+  UnderstandQueryResponse,
+} from '../types'
 
 export interface HealthResponse {
   status: string
@@ -76,6 +81,60 @@ export const apiService = {
         }
       } catch {
         // Fallback to generic message
+      }
+      throw new Error(errorMsg)
+    }
+    return res.json()
+  },
+
+  async understandQuery(query: string): Promise<UnderstandQueryResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/v1/understand-query`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    })
+    if (!res.ok) {
+      let errorMsg = `Query understanding failed with status ${res.status}`
+      try {
+        const errJson = await res.json()
+        if (errJson?.error?.message) {
+          errorMsg = errJson.error.message
+        } else if (errJson?.detail) {
+          errorMsg = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail)
+        }
+      } catch {
+        // Fallback
+      }
+      throw new Error(errorMsg)
+    }
+    return res.json()
+  },
+
+  async aiSearch(payload: {
+    query: string
+    page?: number
+    per_page?: number
+    sort?: string
+    order?: string
+    language_override?: string
+    min_stars_override?: number
+  }): Promise<AISearchResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/v1/ai-search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) {
+      let errorMsg = `AI search failed with status ${res.status}`
+      try {
+        const errJson = await res.json()
+        if (errJson?.error?.message) {
+          errorMsg = errJson.error.message
+        } else if (errJson?.detail) {
+          errorMsg = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail)
+        }
+      } catch {
+        // Fallback
       }
       throw new Error(errorMsg)
     }
