@@ -1,33 +1,44 @@
 # OpenScout Database Models
 
-This package defines data models, relational tables, and vector schemas for subsequent persistence phases.
+This package defines SQLAlchemy ORM models, relational tables, and vector schemas for PostgreSQL and pgvector.
 
-## Planned Data Entities (Phase 4+)
+## Implemented Data Entities (Phase 6)
 
-1. **Repository Entity (`repository.py`)**:
-   - `id`: Unique identifier / slug.
+1. **Repository Record (`repository.py`)**:
+   - `id`: GitHub numeric repository ID (BigInteger, Primary Key).
    - `owner`: GitHub user or organization name.
    - `name`: Repository name.
-   - `full_name`: Combined `owner/name`.
+   - `full_name`: Unique combined identifier `owner/name` (Indexed).
    - `description`: Primary summary.
+   - `html_url`: Canonical GitHub URL.
    - `language`: Primary programming language.
-   - `stars`: Stargazers count.
-   - `forks`: Forks count.
-   - `topics`: Array of string topic tags.
-   - `license`: SPDX license identifier.
-   - `readme_content`: Raw crawled markdown.
-   - `last_pushed_at`: Last commit timestamp.
+   - `topics`: JSON list of string topic tags.
+   - `stargazers_count`: Stargazers count.
+   - `forks_count`: Forks count.
+   - `open_issues_count`: Open issues count.
+   - `license_name`: SPDX license identifier.
+   - `readme_content`: Full crawled markdown content.
+   - `embedding`: Vector column (`vector(384)`) for semantic repository search.
+   - `is_indexed`: Boolean flag indicating if README documentation is chunked & indexed.
+   - `last_indexed_at`: Timestamp of most recent documentation indexing.
 
-2. **Embedding Entity (`embedding.py`)**:
-   - `id`: Vector record ID.
-   - `repository_id`: Foreign key reference to Repository.
-   - `embedding`: Vector column (`vector(384)`) indexed using HNSW / IVFFlat via `pgvector`.
-   - `chunk_text`: Associated documentation chunk.
+2. **Documentation Chunk (`documentation.py`)**:
+   - `id`: Integer Primary Key.
+   - `repository_id`: Foreign key reference to `repositories.id` (Indexed).
+   - `chunk_index`: Integer ordering within the documentation.
+   - `chunk_text`: Cleaned markdown text chunk.
+   - `embedding`: Vector column (`vector(384)`) for RAG retrieval.
+   - `token_count`: Estimated token count.
 
-3. **Search Interaction Entity (`search_history.py`)**:
-   - `id`: Unique interaction ID.
-   - `query`: Raw user query.
-   - `extracted_criteria`: JSON breakdown of Mistral-parsed requirements.
-   - `created_at`: Interaction timestamp.
-   - `result_count`: Number of returned candidates.
-
+3. **Chat Conversation & Messages (`chat.py`)**:
+   - **`ChatConversation`**:
+     - `id`: UUID string Primary Key.
+     - `repository_id`: Foreign key reference to `repositories.id`.
+     - `created_at`, `updated_at`: Session timestamps.
+   - **`ChatMessage`**:
+     - `id`: Integer Primary Key.
+     - `conversation_id`: Foreign key reference to `chat_conversations.id` (Indexed).
+     - `role`: Message role (`user`, `assistant`, or `system`).
+     - `content`: Message markdown content.
+     - `sources`: JSON list of referenced chunk citations and similarity scores.
+     - `created_at`: Message timestamp.

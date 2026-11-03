@@ -103,7 +103,7 @@ OpenScout uses the official GitHub REST API (v3) with personal access tokens (`G
 
 ---
 
-## 6. Planned Semantic Search & Embedding Pipeline
+## 6. Semantic Search & Embedding Pipeline (Phase 6 Implemented)
 
 To match user queries with repositories that may not share identical keywords, OpenScout implements semantic vector search:
 
@@ -125,19 +125,63 @@ To match user queries with repositories that may not share identical keywords, O
 
 ---
 
-## 7. Planned PostgreSQL and pgvector Integration
+## 7. PostgreSQL and pgvector Integration (Phase 6 Implemented)
 
 PostgreSQL serves as the single source of truth for repository cache, pre-computed embeddings, and chat histories.
 
-### Key Data Entities
-- **Repositories Table**: GitHub ID, owner, name, description, primary language, topics, stars, forks, license, default branch, last push timestamp, crawled README markdown.
-- **Repository Embeddings Table**: Foreign key to repository, vector column (`vector(dim)`), chunk index, chunk text.
-- **Search Queries / Analytics Table**: User query, extracted criteria, result count, execution latency.
-- **Conversations & Messages Table**: Session ID, message role, content, repository context references for RAG.
+### Key Data Entities & Schema
+- **`repositories` Table**:
+  - `id` (BigInteger PK): GitHub numeric repository ID.
+  - `name`, `full_name`, `owner`: Repository identification.
+  - `description`: Repository overview.
+  - `html_url`, `language`, `topics`, `stargazers_count`, `forks_count`, `open_issues_count`, `license_name`.
+  - `readme_content`: Full crawled markdown content.
+  - `embedding`: 384-dimensional dense vector (`Vector(384)`).
+  - `is_indexed`: Boolean flag indicating documentation indexing status.
+  - `last_indexed_at`: Timestamp of most recent documentation ingestion.
+- **`repository_doc_chunks` Table**:
+  - `id` (Integer PK): Autoincrementing chunk ID.
+  - `repository_id` (BigInteger FK -> `repositories.id`): Associated repository.
+  - `chunk_index` (Integer): Sequence order within document.
+  - `chunk_text` (Text): Cleaned text chunk.
+  - `embedding`: 384-dimensional dense vector (`Vector(384)`).
+  - `token_count` (Integer): Estimated token count.
+- **`chat_conversations` Table**:
+  - `id` (String PK): UUID identifier for conversational thread.
+  - `repository_id` (BigInteger FK -> `repositories.id`): Target repository for RAG.
+  - `created_at`, `updated_at`: Timestamps.
+- **`chat_messages` Table**:
+  - `id` (Integer PK): Message ID.
+  - `conversation_id` (String FK -> `chat_conversations.id`): Conversation session.
+  - `role` (String): `user`, `assistant`, or `system`.
+  - `content` (Text): Message text.
+  - `sources` (JSON): Referenced chunk citations and similarity scores.
+
+### Database Migrations
+- Managed via Alembic (`backend/alembic`).
+- Migration `001_initial_phase6_schema.py` ensures the `CREATE EXTENSION IF NOT EXISTS vector` SQL command executes before table creation.
+- Local execution via Docker Compose (`docker-compose.yml` running `pgvector/pgvector:pg16`).
 
 ---
 
-## 8. Deployment Architecture (Vercel & Render)
+## 8. RAG Chatbot Architecture (Phase 6 Implemented)
+
+The RAG chatbot (`RAGService`) enables conversational exploration of repository documentation:
+
+1. **Context Retrieval**:
+   - Embeds user question via `EmbeddingService`.
+   - Executes vector similarity search on `repository_doc_chunks` scoped to `repository_id`.
+   - Retrieves top-K chunks (`RAG_TOP_K=4`) exceeding similarity threshold (`0.25`).
+2. **Grounded Generation via Mistral AI**:
+   - Strict system prompt instructs the model to answer based **exclusively** on the provided documentation chunks.
+   - If information is absent or insufficient, explicitly sets `has_sufficient_context = false` and informs the user rather than hallucinating details.
+3. **Citations & Multi-Turn History**:
+   - Returns structured `sources` with snippet previews, chunk IDs, and similarity scores.
+   - Saves conversations and messages in PostgreSQL; client can fetch full history via `GET /api/v1/chat/{conversation_id}/messages`.
+
+---
+
+## 9. Deployment Architecture (Vercel & Render)
 
 ```
                        ┌─────────────────────────┐
@@ -174,7 +218,7 @@ PostgreSQL serves as the single source of truth for repository cache, pre-comput
 
 ---
 
-## 9. Security & Secret Management Architecture
+## 10. Security & Secret Management Architecture
 
 1. **Isolation of Secrets**: All API keys (`MISTRAL_API_KEY`, `GITHUB_TOKEN`, `DATABASE_URL`) exist exclusively in backend server environments. No secrets are bundled into client-side JS.
 2. **CORS Whitelisting**: Strict origin validation prevents unauthorized cross-origin calls from arbitrary web origins.

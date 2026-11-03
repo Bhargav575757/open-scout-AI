@@ -1,4 +1,7 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.database import get_db
 from app.core.logging import get_logger
 from app.schemas.query_understanding import (
     AISearchRequest,
@@ -6,9 +9,11 @@ from app.schemas.query_understanding import (
     UnderstandQueryRequest,
     UnderstandQueryResponse,
 )
+from app.schemas.rag import SemanticSearchRequest, SemanticSearchResponse
 from app.schemas.search import SearchRequest, SearchResponse
 from app.services.github_service import github_service
 from app.services.mistral_service import mistral_service
+from app.services.semantic_search_service import semantic_search_service
 
 logger = get_logger("app.api.search")
 router = APIRouter(tags=["Search"])
@@ -85,7 +90,6 @@ async def ai_search(payload: AISearchRequest) -> AISearchResponse:
     requirements = await mistral_service.understand_query(payload.query)
 
     # 2. Derive search criteria for GitHubService
-    # Formulate effective search query: use github_search_query or fallback to keywords/query
     search_query = requirements.github_search_query or " ".join(requirements.keywords[:3]) or payload.query
 
     # Resolve language filter: manual override takes precedence, then primary language extracted by AI
@@ -132,4 +136,36 @@ async def ai_search(payload: AISearchRequest) -> AISearchResponse:
         page=github_response.page,
         per_page=github_response.per_page,
         items=github_response.items,
+    )
+
+
+@router.post(
+    "/semantic-search",
+    response_model=SemanticSearchResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Semantic Vector Repository Search (pgvector)",
+    description=(
+        "Converts user query into dense vector embedding using Sentence Transformers and "
+        "searches indexed GitHub repositories and documentation chunks in PostgreSQL using cosine distance."
+    ),
+)
+async def semantic_search(
+    payload: SemanticSearchRequest,
+    db: AsyncSession = Depends(get_db),
+) -> SemanticSearchResponse:
+    logger.info("Executing semantic vector search for query: '%s'", payload.query)
+    result = await semantic_search_service.search_repositories(
+        query=payload.query,
+        db=db,
+        language=payload.language,
+        min_stars=payload.min_stars,
+        limit=payload.limit,
+        page=payload.page,
+    )
+    return SemanticSearchResponse(
+        query=result["query"],
+        total_count=result["total_count"],
+        page=result["page"],
+        per_page=result["per_page"],
+        items=result["items"],
     )

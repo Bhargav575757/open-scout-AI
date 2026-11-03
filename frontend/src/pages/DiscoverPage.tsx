@@ -11,6 +11,7 @@ import {
   RotateCcw,
   FolderGit2,
   Bot,
+  Brain,
   SlidersHorizontal,
 } from 'lucide-react'
 import { PageHeader } from '../components/layout/PageHeader'
@@ -46,10 +47,10 @@ const STAR_OPTIONS = [
 export const DiscoverPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const initialQuery = searchParams.get('q') || ''
-  const initialMode = (searchParams.get('mode') as 'ai' | 'direct') || 'ai'
+  const initialMode = (searchParams.get('mode') as 'ai' | 'semantic' | 'direct') || 'ai'
 
   const [query, setQuery] = useState(initialQuery)
-  const [searchMode, setSearchMode] = useState<'ai' | 'direct'>(initialMode)
+  const [searchMode, setSearchMode] = useState<'ai' | 'semantic' | 'direct'>(initialMode)
   const [selectedLanguage, setSelectedLanguage] = useState<string>('All Languages')
   const [minStars, setMinStars] = useState<number>(0)
   const [sortBy, setSortBy] = useState<string>('stars')
@@ -86,8 +87,12 @@ export const DiscoverPage: React.FC = () => {
       updated_at: item.updated_at,
       created_at: item.created_at,
       topics: item.topics || [],
+      similarity_score: item.similarity_score,
+      is_indexed: item.is_indexed,
       matchReason:
-        searchMode === 'ai' && extractedRequirements
+        item.similarity_score != null
+          ? `Semantic similarity match (${Math.round(item.similarity_score * 100)}%) based on indexed README embeddings.`
+          : searchMode === 'ai' && extractedRequirements
           ? `Discovered via Mistral AI criteria matching "${extractedRequirements.domain || 'concept'}"`
           : `Live GitHub repository matching "${query}"`,
       defaultBranch: item.default_branch || 'main',
@@ -98,7 +103,7 @@ export const DiscoverPage: React.FC = () => {
   const executeSearch = useCallback(
     async (
       searchQuery: string,
-      mode: 'ai' | 'direct',
+      mode: 'ai' | 'semantic' | 'direct',
       lang: string,
       stars: number,
       sort: string,
@@ -134,6 +139,20 @@ export const DiscoverPage: React.FC = () => {
           setRepositories(mapped)
           setTotalCount(aiResponse.total_count || 0)
           setPage(aiResponse.page || targetPage)
+        } else if (mode === 'semantic') {
+          setExtractedRequirements(null)
+          const semResponse = await apiService.semanticSearch({
+            query: trimmed,
+            language: lang !== 'All Languages' ? lang : undefined,
+            min_stars: stars > 0 ? stars : undefined,
+            page: targetPage,
+            limit: perPage,
+          })
+
+          const mapped = (semResponse.items || []).map(mapGitHubItemToRepo)
+          setRepositories(mapped)
+          setTotalCount(semResponse.total_count || 0)
+          setPage(semResponse.page || targetPage)
         } else {
           setExtractedRequirements(null)
           const response = await apiService.search({
@@ -180,7 +199,7 @@ export const DiscoverPage: React.FC = () => {
     executeSearch(newQuery, searchMode, selectedLanguage, minStars, sortBy, 1)
   }
 
-  const handleModeSwitch = (mode: 'ai' | 'direct') => {
+  const handleModeSwitch = (mode: 'ai' | 'semantic' | 'direct') => {
     setSearchMode(mode)
     setPage(1)
     if (query.trim()) {
@@ -235,14 +254,20 @@ export const DiscoverPage: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-200">
       <PageHeader
         title="Discover GitHub Projects"
-        description="Search open-source repositories using natural language AI reasoning with Mistral AI or direct GitHub queries."
-        badgeText={searchMode === 'ai' ? 'Powered by Mistral AI' : 'GitHub REST API v3'}
+        description="Search open-source repositories using natural language AI reasoning, dense vector semantic search, or direct GitHub queries."
+        badgeText={
+          searchMode === 'ai'
+            ? 'Powered by Mistral AI'
+            : searchMode === 'semantic'
+            ? 'pgvector Vector Search'
+            : 'GitHub REST API v3'
+        }
         showDemoBadge={false}
       />
 
       {/* Mode Switcher Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 rounded-2xl bg-zinc-100/80 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800">
-        <div className="flex items-center gap-1.5 p-1 bg-white dark:bg-zinc-800/80 rounded-xl border border-zinc-200/60 dark:border-zinc-700/60">
+        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-white dark:bg-zinc-800/80 rounded-xl border border-zinc-200/60 dark:border-zinc-700/60">
           <button
             type="button"
             onClick={() => handleModeSwitch('ai')}
@@ -256,6 +281,22 @@ export const DiscoverPage: React.FC = () => {
             <span>AI Natural Language</span>
             <span className="hidden sm:inline-block text-[10px] px-1.5 py-0.2 rounded-full bg-violet-500/30 text-white font-mono">
               Mistral
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleModeSwitch('semantic')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              searchMode === 'semantic'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+            }`}
+          >
+            <Brain className="w-3.5 h-3.5" />
+            <span>Semantic Search</span>
+            <span className="hidden sm:inline-block text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/30 text-white font-mono">
+              pgvector
             </span>
           </button>
 
@@ -276,6 +317,8 @@ export const DiscoverPage: React.FC = () => {
         <span className="text-[11px] text-zinc-500 dark:text-zinc-400 px-2">
           {searchMode === 'ai'
             ? 'Decomposes intent, languages, frameworks, & difficulty with Mistral AI.'
+            : searchMode === 'semantic'
+            ? 'Dense vector similarity matching on indexed repositories via pgvector.'
             : 'Performs raw keyword query and qualifiers directly on GitHub API.'}
         </span>
       </div>
@@ -289,6 +332,8 @@ export const DiscoverPage: React.FC = () => {
             placeholder={
               searchMode === 'ai'
                 ? 'Describe your project (e.g. "I want a beginner-friendly healthcare chatbot using Python and React")...'
+                : searchMode === 'semantic'
+                ? 'Semantic concept search (e.g. "real-time clinical assistant with vector search")...'
                 : 'Search GitHub keywords (e.g. "healthcare chatbot Python React")...'
             }
             isLoading={isLoading}
@@ -413,7 +458,11 @@ export const DiscoverPage: React.FC = () => {
               <div className="flex items-center gap-2 text-violet-700 dark:text-violet-300">
                 <Sparkles className="w-4 h-4 text-violet-500 shrink-0" />
                 <span>
-                  {searchMode === 'ai' ? 'AI Search Query:' : 'Direct GitHub Query:'}{' '}
+                  {searchMode === 'ai'
+                    ? 'AI Search Query:'
+                    : searchMode === 'semantic'
+                    ? 'Semantic Vector Query:'
+                    : 'Direct GitHub Query:'}{' '}
                   <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
                     &ldquo;{query}&rdquo;
                   </strong>
@@ -474,11 +523,15 @@ export const DiscoverPage: React.FC = () => {
               message={
                 searchMode === 'ai'
                   ? 'Understanding requirements with Mistral AI...'
+                  : searchMode === 'semantic'
+                  ? 'Computing vector embeddings & searching pgvector...'
                   : 'Querying GitHub REST API...'
               }
               subtext={
                 searchMode === 'ai'
                   ? 'Decomposing technical constraints, identifying domain, and matching live repositories'
+                  : searchMode === 'semantic'
+                  ? 'Executing dense cosine similarity search over repository descriptions and documentation chunks'
                   : 'Retrieving verified repositories, stargazer counts, and metadata'
               }
             />
@@ -579,11 +632,11 @@ export const DiscoverPage: React.FC = () => {
                 <label className="text-xs font-semibold uppercase text-zinc-400 block mb-2">
                   Search Mode
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-1.5">
                   <button
                     type="button"
                     onClick={() => handleModeSwitch('ai')}
-                    className={`py-2 rounded-lg text-xs font-semibold border ${
+                    className={`py-2 rounded-lg text-[11px] font-semibold border ${
                       searchMode === 'ai'
                         ? 'bg-violet-600 text-white border-violet-600'
                         : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300'
@@ -593,8 +646,19 @@ export const DiscoverPage: React.FC = () => {
                   </button>
                   <button
                     type="button"
+                    onClick={() => handleModeSwitch('semantic')}
+                    className={`py-2 rounded-lg text-[11px] font-semibold border ${
+                      searchMode === 'semantic'
+                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300'
+                    }`}
+                  >
+                    Semantic
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleModeSwitch('direct')}
-                    className={`py-2 rounded-lg text-xs font-semibold border ${
+                    className={`py-2 rounded-lg text-[11px] font-semibold border ${
                       searchMode === 'direct'
                         ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
                         : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300'

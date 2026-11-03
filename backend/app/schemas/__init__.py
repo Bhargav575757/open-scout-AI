@@ -16,6 +16,18 @@ from app.schemas.query_understanding import (
     UnderstandQueryRequest,
     UnderstandQueryResponse,
 )
+from app.schemas.rag import (
+    ChatMessageResponse,
+    ChatRequest,
+    ChatResponse,
+    ChatSource,
+    ConversationHistoryResponse,
+    IndexRepositoryRequest,
+    IndexRepositoryResponse,
+    IndexStatusResponse,
+    SemanticSearchRequest,
+    SemanticSearchResponse,
+)
 from app.schemas.repository import RepositoryResponse
 from app.schemas.search import SearchRequest, SearchResponse
 
@@ -39,5 +51,15 @@ __all__ = [
     "UnderstandQueryResponse",
     "AISearchRequest",
     "AISearchResponse",
+    "IndexRepositoryRequest",
+    "IndexRepositoryResponse",
+    "IndexStatusResponse",
+    "SemanticSearchRequest",
+    "SemanticSearchResponse",
+    "ChatRequest",
+    "ChatResponse",
+    "ChatSource",
+    "ChatMessageResponse",
+    "ConversationHistoryResponse",
 ]
 

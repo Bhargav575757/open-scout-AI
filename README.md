@@ -44,11 +44,12 @@ OpenScout decodes user intent, extracts technical and domain constraints with Mi
 - **Pydantic & Pydantic-Settings**: Strict data validation, schema enforcement, and environment configuration.
 - **Uvicorn**: Lightning-fast ASGI production web server.
 
-### AI & Data (Planned for Subsequent Phases)
-- **Mistral API**: Primary LLM provider for intent extraction, reasoning, comparison, and RAG synthesis.
-- **Sentence Transformers**: Dense vector embeddings for semantic code and document matching.
-- **GitHub REST API (v3)**: Official API for repository discovery, metadata verification, and content ingestion.
-- **PostgreSQL + pgvector**: Relational storage and vector database for similarity search and query caching.
+### AI & Data
+- **Mistral API**: Primary LLM provider for intent extraction, query understanding, and RAG synthesis (`mistral-small-latest`).
+- **Sentence Transformers**: Dense vector embeddings (`sentence-transformers/all-MiniLM-L6-v2`, 384 dimensions) for semantic repository and document matching.
+- **GitHub REST API (v3)**: Official API for repository discovery, metadata verification, and documentation ingestion.
+- **PostgreSQL + pgvector**: Relational storage and vector database for repository embeddings, chunk indexes, and conversational chat history.
+- **SQLAlchemy & Alembic**: Async ORM and database schema migration management.
 
 ### Deployment & CI/CD
 - **GitHub**: Git version control and GitHub Actions automation.
@@ -147,13 +148,16 @@ Copy-Item .env.example .env
 ```
 
 Configuration keys:
-| Variable | Description | Phase 1 Default |
+| Variable | Description | Default |
 |---|---|---|
 | `FRONTEND_URL` | Allowed origin for frontend CORS | `http://localhost:5173` |
 | `ALLOWED_ORIGINS` | Optional comma-separated extra CORS origins | *(empty)* |
-| `MISTRAL_API_KEY` | Mistral AI API key (Backend only) | *(Leave empty for Phase 1)* |
-| `GITHUB_TOKEN` | GitHub Personal Access Token (Backend only) | *(Leave empty for Phase 1)* |
-| `DATABASE_URL` | PostgreSQL connection string with pgvector | *(Leave empty for Phase 1)* |
+| `MISTRAL_API_KEY` | Mistral AI API key (Backend only) | `your_mistral_api_key` |
+| `MISTRAL_MODEL` | Mistral model identifier | `mistral-small-latest` |
+| `GITHUB_TOKEN` | GitHub Personal Access Token (Backend only) | *(empty for unauthenticated search)* |
+| `DATABASE_URL` | PostgreSQL connection string with pgvector | `postgresql+asyncpg://postgres:postgres@localhost:5432/openscout` |
+| `EMBEDDING_MODEL` | HuggingFace sentence embedding model | `sentence-transformers/all-MiniLM-L6-v2` |
+| `EMBEDDING_DIMENSION` | Dimensionality of dense vector embeddings | `384` |
 
 ### Frontend (`frontend/.env`)
 Copy the example file to create your local `.env`:
@@ -171,7 +175,19 @@ Configuration keys:
 
 ---
 
-## 8. Commands to Run Frontend and Backend
+## 8. Commands to Run Frontend, Backend, and Database
+
+### Running Database (PostgreSQL + pgvector via Docker)
+From the project root:
+```powershell
+docker compose up -d
+```
+
+### Running Database Migrations (Alembic)
+```powershell
+cd backend
+..\backend\.venv\Scripts\alembic upgrade head
+```
 
 ### Running Backend (FastAPI)
 From the project root:
@@ -200,18 +216,13 @@ npm run dev
 
 ### Verification Endpoints
 - **Root**: `GET http://localhost:8000/`
-  ```json
-  {
-    "message": "Welcome to OpenScout API"
-  }
-  ```
 - **Health**: `GET http://localhost:8000/api/health`
-  ```json
-  {
-    "status": "healthy",
-    "service": "OpenScout Backend"
-  }
-  ```
+- **AI Query Understanding**: `POST http://localhost:8000/api/v1/understand-query`
+- **Semantic Vector Search**: `POST http://localhost:8000/api/v1/search/semantic-search`
+- **Index Repository**: `POST http://localhost:8000/api/v1/repositories/{owner}/{repo}/index`
+- **Index Status**: `GET http://localhost:8000/api/v1/repositories/{owner}/{repo}/index-status`
+- **RAG Chat**: `POST http://localhost:8000/api/v1/chat`
+- **Chat History**: `GET http://localhost:8000/api/v1/chat/{conversation_id}/messages`
 
 ---
 
@@ -227,12 +238,10 @@ npm run dev
   - Async GitHub REST API client using HTTPX, live repository search with qualifiers (`language:`, `stars:>=`), owner/repo and ID lookup, rate-limit header parsing (`X-RateLimit-*`), exponential backoff on transient errors, and end-to-end integration with the React Discover and Repository Details UI.
 - [x] **Phase 5: Mistral AI Integration & Natural Language Query Understanding** *(Completed)*
   - Official Mistral Python SDK (`mistral-small-latest`), structured prompt engineering, `ProjectRequirements` schema validation, defense against hallucinated languages vs frameworks, `POST /api/v1/understand-query`, end-to-end `POST /api/v1/ai-search` chained to GitHubService, and interactive frontend "Understanding your requirements" UI.
-- [ ] **Phase 6: Semantic Search & pgvector Embeddings Pipeline**
-  - Database schema migrations, vector embedding generation with Sentence Transformers, and pgvector cosine distance hybrid ranking.
+- [x] **Phase 6: Semantic Search, PostgreSQL, pgvector and RAG Chatbot** *(Completed)*
+  - PostgreSQL schema and `pgvector` vector extension, Alembic async database migrations (`alembic/versions`), Docker Compose service (`pgvector/pgvector:pg16`), Sentence Transformers embedding engine (`sentence-transformers/all-MiniLM-L6-v2`, 384 dimensions), documentation crawler & markdown chunker (`ingestion_service.py`), semantic repository search engine (`semantic_search_service.py`), grounded RAG Q&A engine with citation tracking and persistence (`rag_service.py`), and React frontend integration (Semantic Search mode, similarity badges, interactive repository chatbot widget with index triggering and source citations).
 - [ ] **Phase 7: Multi-Repository Comparison Engine & AI Explanations**
   - Side-by-side technical comparison matrices, documentation depth scoring, and tailored AI justifications.
-- [ ] **Phase 8: RAG-Powered Repository Q&A Chatbot**
-  - In-browser repository documentation chunking, contextual vector retrieval, and conversational query handling.
-- [ ] **Phase 9: Production Hardening, CI/CD, and Cloud Deployment**
+- [ ] **Phase 8: Advanced Production Hardening, CI/CD, and Cloud Deployment**
   - GitHub Actions CI/CD pipelines, Vercel frontend deployment, and Render backend & managed database provisioning.
 

@@ -101,6 +101,20 @@ class RepositoryResponse(BaseModel):
         description="Default git branch name (e.g. main, master)",
         examples=["main"],
     )
+    match_reason: Optional[str] = Field(
+        default=None,
+        description="Justification or semantic relevance match description",
+    )
+    similarity_score: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Semantic cosine similarity score between 0.0 and 1.0",
+    )
+    is_indexed: bool = Field(
+        default=False,
+        description="Whether this repository documentation has been indexed in pgvector",
+    )
 
     @model_validator(mode="before")
     @classmethod

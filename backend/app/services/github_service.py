@@ -342,6 +342,33 @@ class GitHubService:
             details={"repository_id": clean_id},
         )
 
+    async def get_repository_readme(self, owner: str, repo: str) -> Optional[str]:
+        """
+        Retrieves the decoded README markdown content for a repository from GitHub.
+        Returns None if the repository does not have a README file (HTTP 404).
+        """
+        clean_owner = owner.strip()
+        clean_repo = repo.strip()
+        endpoint = f"/repos/{clean_owner}/{clean_repo}/readme"
+
+        try:
+            logger.info("Fetching README for %s/%s", clean_owner, clean_repo)
+            response = await self._send_request("GET", endpoint)
+            data = response.json()
+            raw_content = data.get("content", "")
+            encoding = data.get("encoding", "")
+
+            if encoding == "base64" and raw_content:
+                import base64
+                decoded_bytes = base64.b64decode(raw_content)
+                return decoded_bytes.decode("utf-8", errors="replace")
+
+            return raw_content if raw_content else None
+
+        except GitHubResourceNotFoundException:
+            logger.info("Repository %s/%s has no README on GitHub.", clean_owner, clean_repo)
+            return None
+
 
 # Global singleton instance
 github_service = GitHubService()

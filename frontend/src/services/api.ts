@@ -3,6 +3,11 @@ import type {
   GitHubRepositoryItem,
   AISearchResponse,
   UnderstandQueryResponse,
+  SemanticSearchResponse,
+  IndexRepositoryResponse,
+  IndexStatusResponse,
+  ChatResponse,
+  ConversationHistoryResponse,
 } from '../types'
 
 export interface HealthResponse {
@@ -137,6 +142,101 @@ export const apiService = {
         // Fallback
       }
       throw new Error(errorMsg)
+    }
+    return res.json()
+  },
+
+  async semanticSearch(payload: {
+    query: string
+    language?: string
+    min_stars?: number
+    limit?: number
+    page?: number
+  }): Promise<SemanticSearchResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/v1/semantic-search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) {
+      let errorMsg = `Semantic search failed with status ${res.status}`
+      try {
+        const errJson = await res.json()
+        if (errJson?.error?.message) {
+          errorMsg = errJson.error.message
+        } else if (errJson?.detail) {
+          errorMsg = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail)
+        }
+      } catch {
+        // Fallback
+      }
+      throw new Error(errorMsg)
+    }
+    return res.json()
+  },
+
+  async indexRepository(owner: string, repo: string, forceRefresh: boolean = false): Promise<IndexRepositoryResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/v1/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/index`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ force_refresh: forceRefresh }),
+    })
+    if (!res.ok) {
+      let errorMsg = `Repository indexing failed with status ${res.status}`
+      try {
+        const errJson = await res.json()
+        if (errJson?.error?.message) {
+          errorMsg = errJson.error.message
+        } else if (errJson?.detail) {
+          errorMsg = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail)
+        }
+      } catch {
+        // Fallback
+      }
+      throw new Error(errorMsg)
+    }
+    return res.json()
+  },
+
+  async getIndexStatus(owner: string, repo: string): Promise<IndexStatusResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/v1/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/index-status`)
+    if (!res.ok) {
+      throw new Error(`Failed to check index status (${res.status})`)
+    }
+    return res.json()
+  },
+
+  async chatWithRepository(payload: {
+    repository_id: string | number
+    question: string
+    conversation_id?: string
+  }): Promise<ChatResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/v1/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) {
+      let errorMsg = `Chatbot response failed (${res.status})`
+      try {
+        const errJson = await res.json()
+        if (errJson?.error?.message) {
+          errorMsg = errJson.error.message
+        } else if (errJson?.detail) {
+          errorMsg = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail)
+        }
+      } catch {
+        // Fallback
+      }
+      throw new Error(errorMsg)
+    }
+    return res.json()
+  },
+
+  async getChatMessages(conversationId: string): Promise<ConversationHistoryResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/v1/chat/${encodeURIComponent(conversationId)}/messages`)
+    if (!res.ok) {
+      throw new Error(`Failed to fetch chat history (${res.status})`)
     }
     return res.json()
   },

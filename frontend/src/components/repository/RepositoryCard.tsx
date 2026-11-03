@@ -54,6 +54,17 @@ export const RepositoryCard: React.FC<RepositoryCardProps> = ({ repository }) =>
                     GitHub Repo
                   </Badge>
                 )}
+                {repository.similarity_score != null && (
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-emerald-500" />
+                    {Math.round(repository.similarity_score * 100)}% Match
+                  </span>
+                )}
+                {repository.is_indexed && (
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-violet-100 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800">
+                    RAG Ready
+                  </span>
+                )}
               </div>
               <Link
                 to={`/repository/${encodeURIComponent(repository.full_name || repository.id)}`}

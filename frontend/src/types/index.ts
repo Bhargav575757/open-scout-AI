@@ -31,6 +31,8 @@ export interface Repository {
   suitabilitySummary?: string
   defaultBranch?: string
   isLiveGitHub?: boolean
+  similarity_score?: number | null
+  is_indexed?: boolean
 }
 
 export type SortOption = 'relevance' | 'stars' | 'updated' | 'forks'
@@ -68,6 +70,8 @@ export interface GitHubRepositoryItem {
   created_at?: string | null
   updated_at?: string | null
   default_branch?: string | null
+  similarity_score?: number | null
+  is_indexed?: boolean
 }
 
 export interface GitHubSearchResponse {
@@ -130,4 +134,60 @@ export interface NavItem {
   href: string
   icon: string
   badge?: string
+}
+
+export interface IndexRepositoryResponse {
+  success: boolean
+  repository_id: number
+  full_name: string
+  is_indexed: boolean
+  chunks_count: number
+  message: string
+}
+
+export interface IndexStatusResponse {
+  repository_id?: number | null
+  full_name: string
+  is_indexed: boolean
+  indexed_at?: string | null
+  chunks_count: number
+}
+
+export interface SemanticSearchResponse {
+  query: string
+  total_count: number
+  page: number
+  per_page: number
+  items: GitHubRepositoryItem[]
+}
+
+export interface ChatSource {
+  chunk_index: number
+  section_header?: string | null
+  snippet: string
+  similarity_score?: number | null
+}
+
+export interface ChatMessage {
+  id?: number | string
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  sources?: ChatSource[]
+  created_at?: string
+}
+
+export interface ChatResponse {
+  conversation_id: string
+  repository_id: number
+  full_name: string
+  question: string
+  answer: string
+  sources: ChatSource[]
+  insufficient_context: boolean
+}
+
+export interface ConversationHistoryResponse {
+  conversation_id: string
+  repository_id: number
+  messages: ChatMessage[]
 }

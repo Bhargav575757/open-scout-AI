@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from app.api.routes.chat import router as chat_router
 from app.api.routes.compare import router as compare_router
 from app.api.routes.health import router as health_router
 from app.api.routes.history import router as history_router
@@ -12,6 +13,7 @@ api_v1_router.include_router(search_router)
 api_v1_router.include_router(repositories_router)
 api_v1_router.include_router(compare_router)
 api_v1_router.include_router(history_router)
+api_v1_router.include_router(chat_router)
 
 # Legacy router maintaining Phase 1 compatibility (GET /api/health)
 legacy_router = APIRouter(prefix="/api")

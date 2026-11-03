@@ -222,6 +222,91 @@ class MistralUpstreamException(MistralAPIException):
         )
 
 
+class DatabaseException(OpenScoutException):
+    """Base exception for database failures."""
+
+    def __init__(
+        self,
+        message: str,
+        code: str = "DATABASE_ERROR",
+        status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR,
+        details: Optional[Any] = None,
+    ):
+        super().__init__(
+            message=message,
+            code=code,
+            status_code=status_code,
+            details=details,
+        )
+
+
+class DatabaseConnectionException(DatabaseException):
+    """Raised when the PostgreSQL/pgvector database is unreachable."""
+
+    def __init__(
+        self,
+        message: str = "Database connection failed. Please ensure PostgreSQL with pgvector is running.",
+        details: Optional[Any] = None,
+    ):
+        super().__init__(
+            message=message,
+            code="DATABASE_CONNECTION_ERROR",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            details=details,
+        )
+
+
+class RepositoryNotIndexedException(ResourceNotFoundException):
+    """Raised when a RAG query or status check is executed on a repository that has not been indexed."""
+
+    def __init__(
+        self,
+        message: str = "This repository has not been indexed yet. Please trigger documentation indexing first.",
+        details: Optional[Any] = None,
+    ):
+        super().__init__(
+            message=message,
+            details=details,
+        )
+        self.code = "REPOSITORY_NOT_INDEXED"
+
+
+class IngestionException(OpenScoutException):
+    """Raised when documentation ingestion or indexing fails."""
+
+    def __init__(
+        self,
+        message: str,
+        code: str = "INGESTION_ERROR",
+        status_code: int = status.HTTP_422_UNPROCESSABLE_ENTITY,
+        details: Optional[Any] = None,
+    ):
+        super().__init__(
+            message=message,
+            code=code,
+            status_code=status_code,
+            details=details,
+        )
+
+
+class RAGException(OpenScoutException):
+    """Raised when RAG chatbot query processing or context generation fails."""
+
+    def __init__(
+        self,
+        message: str,
+        code: str = "RAG_ERROR",
+        status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR,
+        details: Optional[Any] = None,
+    ):
+        super().__init__(
+            message=message,
+            code=code,
+            status_code=status_code,
+            details=details,
+        )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """
     Registers centralized exception handlers to format all errors into a uniform JSON structure.

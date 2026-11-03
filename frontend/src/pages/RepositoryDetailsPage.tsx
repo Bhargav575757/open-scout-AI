@@ -23,6 +23,7 @@ import { LoadingState } from '../components/common/LoadingState'
 import { EmptyState } from '../components/common/EmptyState'
 import { useComparison } from '../context/ComparisonContext'
 import { apiService } from '../services/api'
+import { RepositoryChatbot } from '../components/chat/RepositoryChatbot'
 import type { Repository } from '../types'
 
 export const RepositoryDetailsPage: React.FC = () => {
@@ -299,6 +300,15 @@ export const RepositoryDetailsPage: React.FC = () => {
             {repo.suitabilitySummary}
           </p>
         )}
+      </div>
+
+      {/* RAG Repository Documentation Chatbot (Phase 6) */}
+      <div className="space-y-3">
+        <RepositoryChatbot
+          owner={repo.owner}
+          repo={repo.name}
+          repositoryName={repo.name}
+        />
       </div>
 
       {/* Installation Instructions Preview */}

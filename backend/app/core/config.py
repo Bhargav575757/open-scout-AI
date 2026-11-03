@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     """
 
     APP_NAME: str = Field(default="OpenScout API", description="Name of the application")
-    APP_VERSION: str = Field(default="0.5.0", description="Semver application version")
+    APP_VERSION: str = Field(default="0.6.0", description="Semver application version")
     DEBUG: bool = Field(default=False, description="Enable debug mode and verbose logging")
     API_V1_PREFIX: str = Field(default="/api/v1", description="Prefix for Version 1 API endpoints")
     PORT: int = Field(default=8000, description="Port on which the application listens")
@@ -61,10 +61,40 @@ class Settings(BaseSettings):
         description="Maximum retry attempts for transient Mistral errors (5xx/timeouts)",
     )
 
-    # Database Integrations (Phase 6+)
+    # Database Configuration (Phase 6 - PostgreSQL + pgvector)
     DATABASE_URL: str = Field(
-        default="",
-        description="PostgreSQL connection string with pgvector extension",
+        default="postgresql+asyncpg://postgres:postgres@localhost:5432/openscout",
+        description="PostgreSQL async connection string with pgvector extension",
+    )
+    DATABASE_ECHO: bool = Field(
+        default=False,
+        description="Enable SQLAlchemy SQL query echo logging",
+    )
+
+    # Embedding & RAG Configuration (Phase 6)
+    EMBEDDING_MODEL: str = Field(
+        default="sentence-transformers/all-MiniLM-L6-v2",
+        description="HuggingFace model path for dense vector embeddings",
+    )
+    EMBEDDING_DIMENSION: int = Field(
+        default=384,
+        description="Dimension size of output embedding vectors",
+    )
+    DOC_MAX_CHARS: int = Field(
+        default=50000,
+        description="Maximum raw documentation character limit per repository",
+    )
+    CHUNK_SIZE: int = Field(
+        default=600,
+        description="Character size of text chunks for documentation indexing",
+    )
+    CHUNK_OVERLAP: int = Field(
+        default=100,
+        description="Character overlap between consecutive chunks",
+    )
+    RAG_TOP_K: int = Field(
+        default=4,
+        description="Number of most relevant chunks retrieved for RAG context synthesis",
     )
 
     # Logging Configuration
