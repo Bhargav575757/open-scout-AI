@@ -46,7 +46,7 @@ class ValidationException(OpenScoutException):
         super().__init__(
             message=message,
             code="VALIDATION_ERROR",
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             details=details,
         )
 
@@ -278,7 +278,7 @@ class IngestionException(OpenScoutException):
         self,
         message: str,
         code: str = "INGESTION_ERROR",
-        status_code: int = status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code: int = status.HTTP_422_UNPROCESSABLE_CONTENT,
         details: Optional[Any] = None,
     ):
         super().__init__(
@@ -347,7 +347,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             formatted_errors.append({"field": loc or "request", "message": msg})
 
         return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content={
                 "error": {
                     "code": "REQUEST_VALIDATION_ERROR",

@@ -226,7 +226,82 @@ npm run dev
 
 ---
 
-## 9. Development Roadmap
+## 9. Deployment Guide
+
+### A. Pushing to GitHub
+
+1. Ensure all your local changes are committed:
+   ```bash
+   git add -A
+   git commit -m "feat: complete project and production deployment setup"
+   ```
+2. Create a new repository on [GitHub](https://github.com/new) (e.g. `openscout`).
+3. Link your local repository and push:
+   ```bash
+   # Rename branch to main if needed
+   git branch -M main
+
+   # Add your GitHub remote repository
+   git remote add origin https://github.com/<YOUR_GITHUB_USERNAME>/openscout.git
+
+   # Push code to GitHub
+   git push -u origin main
+   ```
+
+> **Security Note**: All secrets (`.env`, credentials, local database caches) are protected by `.gitignore` and `.dockerignore`. Only `.env.example` templates are tracked in Git.
+
+---
+
+### B. Deploying Frontend to Vercel
+
+The frontend is a modern React 19 + Vite SPA optimized for Vercel edge deployment with client-side routing support via `vercel.json`.
+
+#### Option 1: Via Vercel Web Dashboard (Recommended)
+1. Go to [vercel.com](https://vercel.com) and click **"Add New..."** -> **"Project"**.
+2. Connect your GitHub account and import your `openscout` repository.
+3. Configure Project Settings:
+   - **Framework Preset**: `Vite`
+   - **Root Directory**: `frontend`
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+4. In **Environment Variables**, add:
+   - `VITE_API_BASE_URL`: The public URL of your deployed backend (e.g. `https://openscout-backend.onrender.com`).
+5. Click **Deploy**. Vercel will build and assign you a production URL (e.g. `https://openscout.vercel.app`).
+
+#### Option 2: Deploying from Repository Root
+A root [vercel.json](file:///c:/OpenScoutAI/vercel.json) is also provided. If you import the root repository without changing the root directory, Vercel will automatically build the `frontend` folder and route all SPA traffic to `/index.html`.
+
+---
+
+### C. Deploying Backend (Render / Railway / Container)
+
+#### Option 1: Deploy on Render
+1. Go to [render.com](https://render.com) and click **"New Web Service"**.
+2. Connect your GitHub repository.
+3. Configure:
+   - **Root Directory**: `backend`
+   - **Environment**: `Python 3`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+4. Add Environment Variables:
+   - `GITHUB_TOKEN`: Your GitHub Personal Access Token.
+   - `MISTRAL_API_KEY`: Your Mistral AI API key.
+   - `MISTRAL_MODEL`: `mistral-small-latest`.
+   - `FRONTEND_URL`: Your Vercel frontend URL (e.g. `https://openscout.vercel.app`).
+   - `DATABASE_URL`: Your PostgreSQL connection string with `pgvector` (e.g. from Render PostgreSQL or Supabase).
+   - `EMBEDDING_MODEL`: `sentence-transformers/all-MiniLM-L6-v2`.
+   - `EMBEDDING_DIMENSION`: `384`.
+
+#### Option 2: Deploy with Docker
+A production [Dockerfile](file:///c:/OpenScoutAI/backend/Dockerfile) is provided in `backend/`:
+```bash
+docker build -t openscout-backend -f backend/Dockerfile backend/
+docker run -p 8000:8000 --env-file backend/.env openscout-backend
+```
+
+---
+
+## 10. Development Roadmap
 
 - [x] **Phase 1: Project Initialization and Architecture Setup** *(Completed)*
   - Modular project structure, TypeScript/Vite/Tailwind setup, FastAPI core architecture, CORS configuration, health endpoints, environment templates, and comprehensive documentation.
