@@ -32,6 +32,8 @@ def get_normalized_database_url(url: Optional[str] = None) -> str:
         return "postgresql+asyncpg://postgres:postgres@localhost:5432/openscout"
     if raw.startswith("postgresql://"):
         return raw.replace("postgresql://", "postgresql+asyncpg://", 1)
+    if raw.startswith("postgres://"):
+        return raw.replace("postgres://", "postgresql+asyncpg://", 1)
     if raw.startswith("sqlite://") and not raw.startswith("sqlite+aiosqlite://"):
         return raw.replace("sqlite://", "sqlite+aiosqlite://", 1)
     return raw

@@ -24,6 +24,10 @@ class Settings(BaseSettings):
         default="",
         description="Optional comma-separated list of additional allowed CORS origins",
     )
+    ALLOW_ORIGIN_REGEX: str = Field(
+        default=r"^https://.*\.vercel\.app$",
+        description="Regex pattern for dynamic CORS origins such as Vercel preview deployments",
+    )
 
     # GitHub REST API Configuration (Phase 4)
     GITHUB_TOKEN: str = Field(

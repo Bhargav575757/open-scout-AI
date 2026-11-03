@@ -18,6 +18,9 @@ def test_database_url_normalization():
     asyncpg_url = "postgresql+asyncpg://user:pass@localhost:5432/testdb"
     assert get_normalized_database_url(asyncpg_url) == asyncpg_url
 
+    render_url = "postgres://user:pass@host.render.com:5432/db"
+    assert get_normalized_database_url(render_url) == "postgresql+asyncpg://user:pass@host.render.com:5432/db"
+
     sqlite_url = "sqlite:///test.db"
     assert get_normalized_database_url(sqlite_url) == "sqlite+aiosqlite:///test.db"
 
