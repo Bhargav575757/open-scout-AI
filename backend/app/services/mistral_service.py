@@ -287,3 +287,4 @@ class MistralService:
 
 
 mistral_service = MistralService()
+

@@ -261,3 +261,4 @@ async def test_distinction_between_languages_and_frameworks():
     assert result.programming_languages == ["TypeScript"]
     assert "React" in result.frameworks
     assert "Next.js" in result.frameworks
+

@@ -37,3 +37,4 @@ QUERY_UNDERSTANDING_USER_TEMPLATE = """Analyze the following developer project i
 User Query:
 "{query}"
 """
+

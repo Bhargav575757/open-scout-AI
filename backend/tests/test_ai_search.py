@@ -195,3 +195,4 @@ def test_existing_direct_search_remains_functional():
             sort=None,
             order="desc",
         )
+

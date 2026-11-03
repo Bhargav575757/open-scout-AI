@@ -265,3 +265,4 @@ class AISearchResponse(BaseModel):
             elif "results" in data and "items" not in data:
                 data["items"] = data["results"]
         return data
+
