@@ -25,17 +25,24 @@ def get_normalized_database_url(url: Optional[str] = None) -> str:
     """
     Ensures the database connection URL uses an async-compatible driver.
     Converts 'postgresql://' to 'postgresql+asyncpg://'.
+    Normalizes 'sslmode=' to 'ssl=' for asyncpg compatibility.
     """
     raw = (url or settings.DATABASE_URL).strip()
     if not raw:
         # Fallback to local default
         return "postgresql+asyncpg://postgres:postgres@localhost:5432/openscout"
     if raw.startswith("postgresql://"):
-        return raw.replace("postgresql://", "postgresql+asyncpg://", 1)
-    if raw.startswith("postgres://"):
-        return raw.replace("postgres://", "postgresql+asyncpg://", 1)
-    if raw.startswith("sqlite://") and not raw.startswith("sqlite+aiosqlite://"):
-        return raw.replace("sqlite://", "sqlite+aiosqlite://", 1)
+        raw = raw.replace("postgresql://", "postgresql+asyncpg://", 1)
+    elif raw.startswith("postgres://"):
+        raw = raw.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif raw.startswith("sqlite://") and not raw.startswith("sqlite+aiosqlite://"):
+        raw = raw.replace("sqlite://", "sqlite+aiosqlite://", 1)
+
+    # Supabase / PostgreSQL query params:
+    # asyncpg expects 'ssl' parameter instead of 'sslmode'
+    if "sslmode=" in raw:
+        raw = raw.replace("sslmode=", "ssl=")
+
     return raw
 
 

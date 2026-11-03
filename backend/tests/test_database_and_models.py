@@ -10,7 +10,7 @@ from app.models.repository import RepositoryRecord
 
 
 def test_database_url_normalization():
-    """Test URL normalization converts postgresql:// to postgresql+asyncpg://."""
+    """Test URL normalization converts postgresql:// to postgresql+asyncpg:// and normalizes sslmode."""
     pg_url = "postgresql://user:pass@localhost:5432/testdb"
     normalized = get_normalized_database_url(pg_url)
     assert normalized == "postgresql+asyncpg://user:pass@localhost:5432/testdb"
@@ -23,6 +23,14 @@ def test_database_url_normalization():
 
     sqlite_url = "sqlite:///test.db"
     assert get_normalized_database_url(sqlite_url) == "sqlite+aiosqlite:///test.db"
+
+    # Supabase session pooler connection URL test
+    supabase_url = "postgresql://postgres.myproject:secretpassword@aws-0-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require"
+    expected_supabase = "postgresql+asyncpg://postgres.myproject:secretpassword@aws-0-us-east-1.pooler.supabase.com:5432/postgres?ssl=require"
+    assert get_normalized_database_url(supabase_url) == expected_supabase
+
+    # Fallback when empty or None
+    assert get_normalized_database_url("   ") == "postgresql+asyncpg://postgres:postgres@localhost:5432/openscout"
 
 
 def test_model_instantiation():

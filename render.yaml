@@ -1,4 +1,4 @@
-# Render Blueprint Specification
+# Render Blueprint Specification (100% Zero-Cost Free Tier)
 # Documentation: https://render.com/docs/blueprint-spec
 services:
   - type: web
@@ -6,15 +6,12 @@ services:
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    plan: starter
+    plan: free
     region: oregon
-    preDeployCommand: alembic upgrade head
     healthCheckPath: /api/v1/health
     envVars:
       - key: PORT
         value: 10000
-      - key: SKIP_STARTUP_MIGRATIONS
-        value: "true"
       - key: FRONTEND_URL
         sync: false
         # Set to your Vercel URL e.g. https://openscoutai.vercel.app
@@ -31,20 +28,11 @@ services:
       - key: MISTRAL_MODEL
         value: mistral-small-latest
       - key: DATABASE_URL
-        fromDatabase:
-          name: openscout-db
-          property: connectionString
+        sync: false
+        # Paste your Supabase connection string: postgresql://postgres.[REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres?sslmode=require
       - key: EMBEDDING_MODEL
         value: sentence-transformers/all-MiniLM-L6-v2
       - key: EMBEDDING_DIMENSION
         value: "384"
       - key: DEBUG
         value: "false"
-
-databases:
-  - name: openscout-db
-    databaseName: openscout
-    user: openscout_user
-    plan: starter
-    region: oregon
-    postgresMajorVersion: "16"
