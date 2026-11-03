@@ -26,7 +26,23 @@ async def lifespan(app: FastAPI):
         settings.DEBUG,
     )
     logger.info("Configured CORS allowed origins: %s", settings.cors_origins)
+
+    # Safe database verification on startup
+    try:
+        from app.core.database import init_db
+        await init_db()
+    except Exception as db_err:
+        logger.warning("Database schema auto-sync skipped during startup: %s", db_err)
+
     yield
+
+    # Graceful database teardown on shutdown
+    try:
+        from app.core.database import close_db
+        await close_db()
+    except Exception as close_err:
+        logger.warning("Error closing database connections during shutdown: %s", close_err)
+
     logger.info("Shutting down %s gracefully...", settings.APP_NAME)
 
 

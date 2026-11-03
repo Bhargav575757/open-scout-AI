@@ -1,0 +1,47 @@
+# Render Blueprint Specification
+# Documentation: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: openscout-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter
+    region: oregon
+    preDeployCommand: alembic upgrade head
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: FRONTEND_URL
+        sync: false
+        # Set to your Vercel URL e.g. https://openscout-ai.vercel.app
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+        # Set to your GitHub PAT for 5,000 requests/hour
+      - key: MISTRAL_API_KEY
+        sync: false
+        # Set to your Mistral AI API Key
+      - key: MISTRAL_MODEL
+        value: mistral-small-latest
+      - key: DATABASE_URL
+        fromDatabase:
+          name: openscout-db
+          property: connectionString
+      - key: EMBEDDING_MODEL
+        value: sentence-transformers/all-MiniLM-L6-v2
+      - key: EMBEDDING_DIMENSION
+        value: "384"
+      - key: DEBUG
+        value: "false"
+
+databases:
+  - name: openscout-db
+    databaseName: openscout
+    user: openscout_user
+    plan: starter
+    region: oregon
+    postgresMajorVersion: "16"
+
