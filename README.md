@@ -320,3 +320,11 @@ docker run -p 8000:8000 --env-file backend/.env openscout-backend
 - [ ] **Phase 8: Advanced Production Hardening, CI/CD, and Cloud Deployment**
   - GitHub Actions CI/CD pipelines, Vercel frontend deployment, and Render backend & managed database provisioning.
 
+---
+
+## 👨‍💻 Author
+
+**Thejeswar Reddy**  
+B.Tech — Computer Science & Engineering (AI & ML)
+
+
